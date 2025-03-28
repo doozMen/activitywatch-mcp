@@ -73,7 +73,7 @@ export const activitywatch_run_query_tool = {
       
       // Format queries
       let queryString = args.query.join(' ');
-      const formattedQueries = [[queryString]];
+      const formattedQueries = [queryString];
 
       // Set up query data
       const queryData = {
