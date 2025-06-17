@@ -13,7 +13,7 @@ actor ActivityWatchMCPServer {
         
         self.server = Server(
             name: "activitywatch-mcp-server",
-            version: "2.3.0",
+            version: "2.3.1",
             capabilities: .init(
                 prompts: .init(listChanged: false),
                 resources: nil,

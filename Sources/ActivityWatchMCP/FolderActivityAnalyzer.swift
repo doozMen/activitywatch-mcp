@@ -67,10 +67,7 @@ actor FolderActivityAnalyzer {
         
         // File managers
         else if ["Finder", "Path Finder"].contains(app) {
-            if !title.isEmpty && !title.contains("/") && !title.contains("\\") {
-                // Simple folder name without path
-                folders.append((path: title, context: nil))
-            }
+            folders.append(contentsOf: extractFinderFolders(from: title))
         }
         
         // Code editors
@@ -103,65 +100,159 @@ actor FolderActivityAnalyzer {
         if let match = title.range(of: #"^([^=\s]+)\s*=\s*(.+)$"#, options: .regularExpression) {
             let parts = title[match].split(separator: "=", maxSplits: 1)
             if parts.count == 2 {
-                let folder = parts[0].trimmingCharacters(in: .whitespaces)
+                let folderPart = parts[0].trimmingCharacters(in: .whitespaces)
                 let context = parts[1].trimmingCharacters(in: .whitespaces)
-                folders.append((path: folder, context: context))
+                
+                // Try to resolve to absolute path
+                let absolutePath = resolveToAbsolutePath(folderPart)
+                folders.append((path: absolutePath, context: context))
                 return folders
             }
         }
         
-        // Pattern 2: "..folder/subfolder" or "../folder"
-        if title.starts(with: "..") {
-            let cleanTitle = title.dropFirst(2).trimmingCharacters(in: CharacterSet(charactersIn: "./"))
-            if !cleanTitle.isEmpty {
-                // Extract the main folder name
-                let components = cleanTitle.split(separator: "/")
-                if let firstComponent = components.first {
-                    folders.append((path: String(firstComponent), context: nil))
-                }
+        // Pattern 2: Absolute paths (starting with / or ~)
+        if title.starts(with: "/") || title.starts(with: "~") {
+            // Clean up the path and extract it
+            let cleanPath = title.trimmingCharacters(in: .whitespaces)
+            if cleanPath.count > 1 {
+                // Expand tilde if present
+                let expandedPath = NSString(string: cleanPath).expandingTildeInPath
+                folders.append((path: expandedPath, context: nil))
+                return folders
             }
         }
         
-        // Pattern 3: Simple folder name without path characters
-        else if !title.contains("/") && !title.contains("\\") && 
-                !title.isEmpty && title.count > 1 &&
-                !["zsh", "bash", "sh", "fish", "tcsh", "~", "-", "_", ".", ".."].contains(title) {
-            folders.append((path: title, context: nil))
+        // Pattern 3: "..folder/subfolder" or "../folder" - relative paths
+        if title.starts(with: "..") {
+            let cleanTitle = title.trimmingCharacters(in: .whitespaces)
+            // For relative paths, we'll keep the folder name but try to guess the full path
+            let folderName = cleanTitle.split(separator: "/").first?.replacingOccurrences(of: "..", with: "") ?? cleanTitle
+            let trimmedName = folderName.trimmingCharacters(in: CharacterSet(charactersIn: "./"))
+            if !trimmedName.isEmpty {
+                let absolutePath = resolveToAbsolutePath(trimmedName)
+                folders.append((path: absolutePath, context: nil))
+            }
         }
         
-        // Pattern 4: Full path - extract last component
+        // Pattern 4: Simple folder name without path characters
+        else if !title.contains("/") && !title.contains("\\") && 
+                !title.isEmpty && title.count > 1 &&
+                !["zsh", "bash", "sh", "fish", "tcsh", "~", "-", "_", ".", "..", "git", "cd", "ls", "pwd"].contains(title) {
+            // Try to resolve to absolute path
+            let absolutePath = resolveToAbsolutePath(title)
+            folders.append((path: absolutePath, context: nil))
+        }
+        
+        // Pattern 5: Full path - preserve the entire path
         else if title.contains("/") {
-            let components = title.split(separator: "/")
-            if let lastComponent = components.last,
-               !lastComponent.isEmpty,
-               lastComponent != "~" {
-                folders.append((path: String(lastComponent), context: nil))
+            // Check if it's a full path or just contains slashes
+            if title.starts(with: "/") || title.starts(with: "~") {
+                let expandedPath = NSString(string: title).expandingTildeInPath
+                folders.append((path: expandedPath, context: nil))
+            } else {
+                // Extract the folder name and try to resolve it
+                let components = title.split(separator: "/")
+                if let lastComponent = components.last,
+                   !lastComponent.isEmpty,
+                   lastComponent != "~" {
+                    let absolutePath = resolveToAbsolutePath(String(lastComponent))
+                    folders.append((path: absolutePath, context: nil))
+                }
             }
         }
         
         return folders
     }
     
-    private func extractEditorFolders(from title: String) -> [(path: String, context: String?)] {
-        var folders: [(path: String, context: String?)] = []
+    /// Try to resolve a folder name to an absolute path by checking common locations
+    private func resolveToAbsolutePath(_ folderName: String) -> String {
+        let cleanName = folderName.trimmingCharacters(in: .whitespaces)
         
-        // Pattern 1: "file.ext — project-name"
-        if let dashRange = title.range(of: " — ") {
-            let projectName = String(title[dashRange.upperBound...]).trimmingCharacters(in: .whitespaces)
-            if !projectName.isEmpty {
-                folders.append((path: projectName, context: nil))
+        // If already absolute, return as is
+        if cleanName.starts(with: "/") {
+            return cleanName
+        }
+        
+        // Common development directories to check
+        let commonPaths = [
+            "~/Developer",
+            "~/Documents",
+            "~/Projects",
+            "~/Code",
+            "~/dev",
+            "~/src",
+            "~/workspace",
+            "~/Desktop",
+            "~/Downloads",
+            "/tmp"
+        ]
+        
+        // Check each common path
+        for basePath in commonPaths {
+            let expandedBase = NSString(string: basePath).expandingTildeInPath
+            let potentialPath = "\(expandedBase)/\(cleanName)"
+            
+            // Check if directory exists
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: potentialPath, isDirectory: &isDirectory),
+               isDirectory.boolValue {
+                return potentialPath
+            }
+            
+            // Also check nested one level deep (e.g., ~/Developer/subfolder/project)
+            do {
+                let subfolders = try FileManager.default.contentsOfDirectory(atPath: expandedBase)
+                for subfolder in subfolders {
+                    let nestedPath = "\(expandedBase)/\(subfolder)/\(cleanName)"
+                    if FileManager.default.fileExists(atPath: nestedPath, isDirectory: &isDirectory),
+                       isDirectory.boolValue {
+                        return nestedPath
+                    }
+                }
+            } catch {
+                // Ignore errors and continue
             }
         }
         
-        // Pattern 2: "[project-name] file.ext"
+        // If not found, return the original name (will show as relative path)
+        return cleanName
+    }
+    
+    private func extractEditorFolders(from title: String) -> [(path: String, context: String?)] {
+        var folders: [(path: String, context: String?)] = []
+        
+        // Pattern 1: "file.ext — project-name" or "file.ext — /full/path/to/project"
+        if let dashRange = title.range(of: " — ") {
+            let projectPart = String(title[dashRange.upperBound...]).trimmingCharacters(in: .whitespaces)
+            if !projectPart.isEmpty {
+                // Check if it's already an absolute path
+                if projectPart.starts(with: "/") || projectPart.starts(with: "~") {
+                    let expandedPath = NSString(string: projectPart).expandingTildeInPath
+                    folders.append((path: expandedPath, context: nil))
+                } else {
+                    // Try to resolve to absolute path
+                    let absolutePath = resolveToAbsolutePath(projectPart)
+                    folders.append((path: absolutePath, context: nil))
+                }
+            }
+        }
+        
+        // Pattern 2: "[project-name] file.ext" or "[/path/to/project] file.ext"
         else if let match = title.range(of: #"\[([^\]]+)\]"#, options: .regularExpression) {
-            let projectName = String(title[match]).dropFirst().dropLast()
-            folders.append((path: String(projectName), context: nil))
+            let projectPart = String(title[match]).dropFirst().dropLast()
+            if projectPart.starts(with: "/") || projectPart.starts(with: "~") {
+                let expandedPath = NSString(string: projectPart).expandingTildeInPath
+                folders.append((path: expandedPath, context: nil))
+            } else {
+                let absolutePath = resolveToAbsolutePath(String(projectPart))
+                folders.append((path: absolutePath, context: nil))
+            }
         }
         
         // Pattern 3: Just the project name (common in Cursor)
         else if !title.contains(".") && !title.contains("/") && !title.isEmpty {
-            folders.append((path: title, context: nil))
+            let absolutePath = resolveToAbsolutePath(title)
+            folders.append((path: absolutePath, context: nil))
         }
         
         return folders
@@ -175,7 +266,9 @@ actor FolderActivityAnalyzer {
         if let projectPart = parts.first {
             let projectName = projectPart.trimmingCharacters(in: .whitespaces)
             if !projectName.isEmpty {
-                folders.append((path: projectName, context: nil))
+                // Xcode projects are often in Developer folder
+                let absolutePath = resolveToAbsolutePath(projectName)
+                folders.append((path: absolutePath, context: nil))
             }
         }
         
@@ -185,11 +278,17 @@ actor FolderActivityAnalyzer {
     private func extractJetBrainsFolders(from title: String) -> [(path: String, context: String?)] {
         var folders: [(path: String, context: String?)] = []
         
-        // JetBrains pattern: "project-name – path/to/file.ext"
+        // JetBrains pattern: "project-name – path/to/file.ext" or "/full/path – file.ext"
         if let dashRange = title.range(of: " – ") {
-            let projectName = String(title[..<dashRange.lowerBound]).trimmingCharacters(in: .whitespaces)
-            if !projectName.isEmpty {
-                folders.append((path: projectName, context: nil))
+            let projectPart = String(title[..<dashRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+            if !projectPart.isEmpty {
+                if projectPart.starts(with: "/") || projectPart.starts(with: "~") {
+                    let expandedPath = NSString(string: projectPart).expandingTildeInPath
+                    folders.append((path: expandedPath, context: nil))
+                } else {
+                    let absolutePath = resolveToAbsolutePath(projectPart)
+                    folders.append((path: absolutePath, context: nil))
+                }
             }
         }
         
@@ -210,6 +309,19 @@ actor FolderActivityAnalyzer {
                 }
                 folders.append((path: path, context: "web"))
             }
+        }
+        
+        return folders
+    }
+    
+    private func extractFinderFolders(from title: String) -> [(path: String, context: String?)] {
+        var folders: [(path: String, context: String?)] = []
+        
+        if !title.isEmpty {
+            // Finder usually shows just the folder name
+            // Try to resolve to absolute path
+            let absolutePath = resolveToAbsolutePath(title)
+            folders.append((path: absolutePath, context: nil))
         }
         
         return folders

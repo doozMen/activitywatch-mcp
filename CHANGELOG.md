@@ -5,6 +5,16 @@ All notable changes to the ActivityWatch MCP Server Swift implementation will be
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2025-06-17
+
+### Improved
+- Folder paths are now resolved to absolute paths when possible
+- Added intelligent path resolution that checks common development directories:
+  - ~/Developer, ~/Documents, ~/Projects, ~/Code, ~/dev, ~/src, ~/workspace
+- Better handling of terminal paths including tilde expansion
+- Improved extraction of full paths from editor window titles
+- Finder folders are now resolved to their likely absolute locations
+
 ## [2.3.0] - 2025-06-17
 
 ### Added
