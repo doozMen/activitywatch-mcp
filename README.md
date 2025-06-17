@@ -7,7 +7,7 @@
 
 A Swift implementation of the Model Context Protocol (MCP) server for [ActivityWatch](https://activitywatch.net/), providing structured access to time tracking data for AI assistants.
 
-## 🌟 What's New in v2.3.0
+## 🌟 What's New in v2.3.1
 
 The `get-folder-activity` tool provides intelligent folder activity analysis by extracting folder names from:
 - Terminal applications (with context support like "project = side-project")

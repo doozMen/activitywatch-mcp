@@ -241,7 +241,7 @@ actor FolderActivityAnalyzer {
         else if let match = title.range(of: #"\[([^\]]+)\]"#, options: .regularExpression) {
             let projectPart = String(title[match]).dropFirst().dropLast()
             if projectPart.starts(with: "/") || projectPart.starts(with: "~") {
-                let expandedPath = NSString(string: projectPart).expandingTildeInPath
+                let expandedPath = NSString(string: String(projectPart)).expandingTildeInPath
                 folders.append((path: expandedPath, context: nil))
             } else {
                 let absolutePath = resolveToAbsolutePath(String(projectPart))

@@ -6,6 +6,7 @@ actor ActivityWatchMCPServer {
     private let server: Server
     private let api: ActivityWatchAPI
     private let logger: Logger
+    private let version = "2.3.1"
     
     init(logger: Logger, serverUrl: String) throws {
         self.logger = logger
@@ -13,7 +14,7 @@ actor ActivityWatchMCPServer {
         
         self.server = Server(
             name: "activitywatch-mcp-server",
-            version: "2.3.1",
+            version: version,
             capabilities: .init(
                 prompts: .init(listChanged: false),
                 resources: nil,
@@ -278,6 +279,15 @@ actor ActivityWatchMCPServer {
                     ]),
                     "required": .array([.string("start"), .string("end")])
                 ])
+            ),
+            
+            Tool(
+                name: "get-version",
+                description: "Get the version of the ActivityWatch MCP Server",
+                inputSchema: .object([
+                    "type": .string("object"),
+                    "properties": .object([:])
+                ])
             )
         ]
     }
@@ -326,6 +336,8 @@ actor ActivityWatchMCPServer {
             return try await handleActiveFolders(args: args)
         case "get-folder-activity":
             return try await handleGetFolderActivity(args: args)
+        case "get-version":
+            return handleGetVersion()
         default:
             throw MCPError.methodNotFound("Unknown tool: \(name)")
         }
@@ -1058,6 +1070,22 @@ actor ActivityWatchMCPServer {
         default:
             return "null"
         }
+    }
+    
+    private func handleGetVersion() -> CallTool.Result {
+        let response = """
+        ActivityWatch MCP Server
+        Version: \(version)
+        
+        Swift implementation of the ActivityWatch Model Context Protocol (MCP) Server.
+        Provides structured access to ActivityWatch time tracking data.
+        
+        For more information, visit: https://github.com/doozMen/opens-time-chat
+        """
+        
+        return CallTool.Result(
+            content: [.text(response)]
+        )
     }
 }
 

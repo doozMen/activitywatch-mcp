@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:activitywatch-mcp}",
+            "name": "Debug activitywatch-mcp",
+            "program": "${workspaceFolder:activitywatch-mcp}/.build/debug/activitywatch-mcp",
+            "preLaunchTask": "swift: Build Debug activitywatch-mcp"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:activitywatch-mcp}",
+            "name": "Release activitywatch-mcp",
+            "program": "${workspaceFolder:activitywatch-mcp}/.build/release/activitywatch-mcp",
+            "preLaunchTask": "swift: Build Release activitywatch-mcp"
+        }
+    ]
+}

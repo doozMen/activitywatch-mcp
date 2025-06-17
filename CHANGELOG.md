@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.3.1] - 2025-06-17
 
+### Added
+- New `get-version` tool to retrieve MCP server version information
+
 ### Improved
 - Folder paths are now resolved to absolute paths when possible
 - Added intelligent path resolution that checks common development directories:
@@ -14,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Better handling of terminal paths including tilde expansion
 - Improved extraction of full paths from editor window titles
 - Finder folders are now resolved to their likely absolute locations
+- Updated install script to include PATH environment variable in MCP configuration
 
 ## [2.3.0] - 2025-06-17
 

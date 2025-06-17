@@ -18,7 +18,10 @@ echo ""
 echo '"mcpServers": {'
 echo '  "activitywatch": {'
 echo '    "command": "activitywatch-mcp",'
-echo '    "args": ["--log-level", "info"]'
+echo '    "args": ["--log-level", "info"],'
+echo '    "env": {'
+echo '      "PATH": "'$HOME'/.swiftpm/bin:/usr/local/bin:/usr/bin:/bin"'
+echo '    }'
 echo '  }'
 echo '}'
 echo ""
