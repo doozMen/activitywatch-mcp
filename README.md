@@ -1,10 +1,21 @@
 # ActivityWatch MCP Server (Swift)
 
 [![MCP](https://img.shields.io/badge/MCP-1.0.2-blue)](https://modelcontextprotocol.io)
+[![Swift](https://img.shields.io/badge/Swift-6.0+-orange)](https://swift.org)
+[![macOS](https://img.shields.io/badge/macOS-15.0+-blue)](https://www.apple.com/macos/)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-A Swift implementation of the Model Context Protocol (MCP) server for ActivityWatch, providing structured access to time tracking data for AI assistants.
+A Swift implementation of the Model Context Protocol (MCP) server for [ActivityWatch](https://activitywatch.net/), providing structured access to time tracking data for AI assistants.
 
-## Features
+## 🌟 What's New in v2.3.0
+
+The `get-folder-activity` tool provides intelligent folder activity analysis by extracting folder names from:
+- Terminal applications (with context support like "project = side-project")
+- Code editors (VSCode, Xcode, Cursor, JetBrains IDEs)
+- File managers (Finder, Path Finder)
+- Web browsers (optional)
+
+## 🚀 Features
 
 - **List Buckets**: Browse all ActivityWatch data buckets with optional filtering
 - **Active Buckets**: Find which buckets have activity within a time range
@@ -16,19 +27,19 @@ A Swift implementation of the Model Context Protocol (MCP) server for ActivityWa
 - **Query Examples**: Built-in examples for common queries
 - **Productivity Prompts**: Guided workflows for productivity analysis
 
-## Prerequisites
+## 📋 Prerequisites
 
 - macOS 15.0+
 - Swift 6.0+
 - [ActivityWatch](https://activitywatch.net/) running locally
 - Swift Package Manager
 
-## Installation
+## 🛠️ Installation
 
 ### Quick Install
 
 ```bash
-./install-activitywatch-mcp.sh
+./install.sh
 ```
 
 ### Manual Installation
@@ -41,15 +52,18 @@ swift build -c release
 swift package experimental-install
 ```
 
-## Configuration
+## ⚙️ Configuration
 
-Add to your Claude Desktop configuration:
+Add to your Claude Desktop configuration file:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
+**Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "activitywatch-mcp": {
-      "command": "activitywatch-mcp",
+      "command": "~/.swiftpm/bin/activitywatch-mcp",
       "args": ["--log-level", "info"]
     }
   }
@@ -61,7 +75,7 @@ Add to your Claude Desktop configuration:
 - `--log-level`: Set logging level (debug, info, warning, error, critical)
 - `--server-url`: Custom ActivityWatch server URL (default: http://localhost:5600)
 
-## Usage
+## 📖 Usage Examples
 
 ### List Buckets
 ```
@@ -122,7 +136,7 @@ Provides a comprehensive summary of local folder activity including:
 Use query-examples tool to see common AQL patterns
 ```
 
-## Development
+## 🔧 Development
 
 ### Building
 
@@ -142,7 +156,7 @@ swift run activitywatch-mcp --log-level debug
 swift test
 ```
 
-## Architecture
+## 🏗️ Architecture
 
 The server is built with:
 - Swift 6.0 with async/await
@@ -150,14 +164,30 @@ The server is built with:
 - AsyncHTTPClient for ActivityWatch API communication
 - Actor-based concurrency for thread safety
 
-## Differences from TypeScript Version
+## 📝 AQL Query Examples
 
-This Swift implementation maintains feature parity with the original TypeScript version while leveraging Swift's:
-- Strong type safety
-- Actor-based concurrency model
-- Native performance
-- Better error handling with Swift's Result types
+The server includes built-in query examples accessible through the `query-examples` tool, including:
+- Basic window and AFK queries
+- Application-specific filtering
+- Time calculations per application
+- Productivity vs unproductive time analysis
+- Combined window and AFK data analysis
 
-## License
+## 🤝 Contributing
 
-MIT License - see LICENSE file for details
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [ActivityWatch](https://activitywatch.net/) for the amazing time tracking platform
+- [Model Context Protocol](https://modelcontextprotocol.io/) for the MCP specification
+- Original [TypeScript implementation](https://github.com/8bitgentleman/activitywatch-mcp-server) by 8bitgentleman
+
+## 🔗 Related Projects
+
+- [ActivityWatch](https://github.com/ActivityWatch/activitywatch) - The time tracking application
+- [MCP Swift SDK](https://github.com/modelcontextprotocol/swift-sdk) - Swift SDK for Model Context Protocol
