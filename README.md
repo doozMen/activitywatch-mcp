@@ -1,248 +1,163 @@
-# ActivityWatch MCP Server
+# ActivityWatch MCP Server (Swift)
 
-A Model Context Protocol (MCP) server that connects to [ActivityWatch](https://activitywatch.net/), allowing LLMs like Claude to interact with your time tracking data.
+[![MCP](https://img.shields.io/badge/MCP-1.0.2-blue)](https://modelcontextprotocol.io)
 
-<a href="https://glama.ai/mcp/servers/msnzvab06f">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/msnzvab06f/badge" alt="ActivityWatch Server MCP server" />
-</a>
+A Swift implementation of the Model Context Protocol (MCP) server for ActivityWatch, providing structured access to time tracking data for AI assistants.
 
 ## Features
 
-- **List Buckets**: View all available ActivityWatch buckets
+- **List Buckets**: Browse all ActivityWatch data buckets with optional filtering
+- **Active Buckets**: Find which buckets have activity within a time range
+- **Active Folders**: Extract unique folder paths from window titles
+- **Get Folder Activity**: Analyze and summarize local folder activity with time tracking
 - **Run Queries**: Execute powerful AQL (ActivityWatch Query Language) queries
-- **Get Raw Events**: Retrieve events directly from any bucket
-- **Get Settings**: Access ActivityWatch configuration settings
-
-## Installation
-
-You can install the ActivityWatch MCP server either from npm or by building it yourself.
-
-### Installing from npm (coming soon)
-
-```bash
-# Global installation
-npm install -g activitywatch-mcp-server
-
-# Or install locally
-npm install activitywatch-mcp-server
-```
-
-### Building from Source
-
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/8bitgentleman/activitywatch-mcp-server.git
-   cd activitywatch-mcp-server
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Build the project:
-   ```bash
-   npm run build
-   ```
+- **Get Events**: Retrieve raw events from specific buckets with time filtering
+- **Get Settings**: Access ActivityWatch configuration
+- **Query Examples**: Built-in examples for common queries
+- **Productivity Prompts**: Guided workflows for productivity analysis
 
 ## Prerequisites
 
-- [ActivityWatch](https://activitywatch.net/) installed and running
-- Node.js (v14 or higher)
-- Claude for Desktop (or any other MCP client)
+- macOS 15.0+
+- Swift 6.0+
+- [ActivityWatch](https://activitywatch.net/) running locally
+- Swift Package Manager
 
-## Usage
+## Installation
 
-### Using with Claude for Desktop
+### Quick Install
 
-1. Open your Claude for Desktop configuration file:
-   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-
-2. Add the MCP server configuration:
-
-```json
-{
-  "mcpServers": {
-    "activitywatch": {
-      "command": "activitywatch-mcp-server",
-      "args": []
-    }
-  }
-}
+```bash
+./install-activitywatch-mcp.sh
 ```
 
-If you built from source, use:
+### Manual Installation
 
-```json
-{
-  "mcpServers": {
-    "activitywatch": {
-      "command": "node",
-      "args": ["/path/to/activitywatch-mcp-server/dist/index.js"]
-    }
-  }
-}
-```
+```bash
+# Build the project
+swift build -c release
 
-3. Restart Claude for Desktop
-4. Look for the MCP icon in Claude's interface to confirm it's working
-
-### Example Queries
-
-Here are some example queries you can try in Claude:
-
-- **List all your buckets**: "What ActivityWatch buckets do I have?"
-- **Get application usage summary**: "Can you show me which applications I've used the most today?"
-- **View browsing history**: "What websites have I spent the most time on today?"
-- **Check productivity**: "How much time have I spent in productivity apps today?"
-- **View settings**: "What are my ActivityWatch settings?" or "Can you check a specific setting in ActivityWatch?"
-
-## Available Tools
-
-### list-buckets
-
-Lists all available ActivityWatch buckets with optional type filtering.
-
-Parameters:
-- `type` (optional): Filter buckets by type (e.g., "window", "web", "afk")
-- `includeData` (optional): Include bucket data in response
-
-### run-query
-
-Run a query in ActivityWatch's query language (AQL).
-
-Parameters:
-- `timeperiods`: Time period(s) to query formatted as array of strings. For date ranges, use format: `["2024-10-28/2024-10-29"]`
-- `query`: Array of query statements in ActivityWatch Query Language, where each item is a complete query with statements separated by semicolons
-- `name` (optional): Name for the query (used for caching)
-
-**IMPORTANT**: Each query string should contain a complete query with multiple statements separated by semicolons.
-
-Example request format:
-```json
-{
-  "timeperiods": ["2024-10-28/2024-10-29"],
-  "query": ["events = query_bucket('aw-watcher-window_UNI-qUxy6XHnLkk'); RETURN = events;"]
-}
-```
-
-Note that:
-- `timeperiods` should have pre-formatted date ranges with slashes
-- Each item in the `query` array is a complete query with all statements
-
-### get-events
-
-Get raw events from an ActivityWatch bucket.
-
-Parameters:
-- `bucketId`: ID of the bucket to fetch events from
-- `start` (optional): Start date/time in ISO format
-- `end` (optional): End date/time in ISO format
-- `limit` (optional): Maximum number of events to return
-
-### get-settings
-
-Get ActivityWatch settings from the server.
-
-Parameters:
-- `key` (optional): Get a specific settings key instead of all settings
-
-## Query Language Examples
-
-ActivityWatch uses a simple query language. Here are some common patterns:
-
-```
-// Get window events
-window_events = query_bucket(find_bucket("aw-watcher-window_"));
-RETURN = window_events;
-
-// Get only when not AFK
-afk_events = query_bucket(find_bucket("aw-watcher-afk_"));
-not_afk = filter_keyvals(afk_events, "status", ["not-afk"]);
-window_events = filter_period_intersect(window_events, not_afk);
-RETURN = window_events;
-
-// Group by app
-window_events = query_bucket(find_bucket("aw-watcher-window_"));
-events_by_app = merge_events_by_keys(window_events, ["app"]);
-RETURN = sort_by_duration(events_by_app);
-
-// Filter by app name
-window_events = query_bucket(find_bucket("aw-watcher-window_"));
-code_events = filter_keyvals(window_events, "app", ["Code"]);
-RETURN = code_events;
+# Install to system
+swift package experimental-install
 ```
 
 ## Configuration
 
-The server connects to the ActivityWatch API at `http://localhost:5600` by default. If your ActivityWatch instance is running on a different host or port, you can modify this in the source code.
-
-## Troubleshooting
-
-### ActivityWatch Not Running
-
-If ActivityWatch isn't running, the server will show connection errors. Make sure ActivityWatch is running and accessible at http://localhost:5600.
-
-### Query Errors
-
-If you're encountering query errors:
-
-1. Check your query syntax
-2. Make sure the bucket IDs are correct
-3. Verify that the timeperiods contain data
-4. Check ActivityWatch logs for more details
-
-### Claude/MCP Query Formatting Issues
-
-If Claude reports errors when running queries through this MCP server, it's likely due to formatting issues. Make sure your query follows this exact format in your prompts:
+Add to your Claude Desktop configuration:
 
 ```json
 {
-  "timeperiods": ["2024-10-28/2024-10-29"],
-  "query": ["events = query_bucket('aw-watcher-window_UNI-qUxy6XHnLkk'); RETURN = events;"]
+  "mcpServers": {
+    "activitywatch-mcp": {
+      "command": "activitywatch-mcp",
+      "args": ["--log-level", "info"]
+    }
+  }
 }
 ```
 
-Common issues:
+### Options
 
-- Time periods not formatted correctly (should be "start/end" in a single string within an array)
-- **Query statements split into separate array elements instead of being combined in one string**
+- `--log-level`: Set logging level (debug, info, warning, error, critical)
+- `--server-url`: Custom ActivityWatch server URL (default: http://localhost:5600)
 
-#### The Most Common Formatting Issue
+## Usage
 
-The most frequent error is when Claude splits each query statement into its own array element like this:
-
-```json
-{
-  "query": [
-    "browser_events = query_bucket('aw-watcher-web');",
-    "afk_events = query_bucket('aw-watcher-afk');",
-    "RETURN = events;"
-  ],
-  "timeperiods": ["2024-10-28/2024-10-29"]
-}
+### List Buckets
+```
+Use the list-buckets tool to see available data sources
+Optional: filter by type (e.g., "window", "afk")
 ```
 
-This is INCORRECT. Instead, all statements should be in a single string within the array:
-
-```json
-{
-  "timeperiods": ["2024-10-28/2024-10-29"],
-  "query": ["browser_events = query_bucket('aw-watcher-web'); afk_events = query_bucket('aw-watcher-afk'); RETURN = events;"]
-}
+### Run Queries
+```
+Use run-query tool with:
+- timeperiods: ["2024-01-01T00:00:00+00:00/2024-01-02T00:00:00+00:00"]
+- query: ["events = query_bucket('aw-watcher-window_hostname'); RETURN = events;"]
 ```
 
-#### When Prompting Claude
+### Get Events
+```
+Use get-events tool with:
+- bucket_id: "aw-watcher-window_hostname"
+- Optional: limit, start, end times
+```
 
-When prompting Claude, be very explicit about the format and use examples. For instance, say:
+### Active Buckets
+```
+Use active-buckets tool with:
+- start: "2024-01-01T00:00:00Z"
+- end: "2024-01-02T00:00:00Z"
+- Optional: min_events (default: 1)
+```
 
-"Run a query with timeperiods as `["2024-10-28/2024-10-29"]` and query as `["statement1; statement2; RETURN = result;"]`. Important: Make sure ALL query statements are in a single string within the array, not split into separate array elements."
+### Active Folders
+```
+Use active-folders tool with:
+- start: "2024-01-01T00:00:00Z"
+- end: "2024-01-02T00:00:00Z"
+- Optional: bucket_filter (to filter bucket IDs)
 
-## Contributing
+Extracts folder paths from window titles in file managers, terminals, and editors.
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### Get Folder Activity
+```
+Use get-folder-activity tool with:
+- start: "2024-01-01T00:00:00Z"
+- end: "2024-01-02T00:00:00Z"
+- Optional: includeWeb (include web URLs as folders, default: false)
+- Optional: minDuration (minimum seconds to consider active, default: 5)
+
+Provides a comprehensive summary of local folder activity including:
+- Time spent in each folder
+- Number of events per folder
+- Folders grouped by application
+- Context extraction from terminal titles (e.g., "project = side-project")
+- Top 10 most active folders
+```
+
+### Query Examples
+```
+Use query-examples tool to see common AQL patterns
+```
+
+## Development
+
+### Building
+
+```bash
+swift build
+```
+
+### Running in Debug Mode
+
+```bash
+swift run activitywatch-mcp --log-level debug
+```
+
+### Testing
+
+```bash
+swift test
+```
+
+## Architecture
+
+The server is built with:
+- Swift 6.0 with async/await
+- MCP Swift SDK for protocol implementation
+- AsyncHTTPClient for ActivityWatch API communication
+- Actor-based concurrency for thread safety
+
+## Differences from TypeScript Version
+
+This Swift implementation maintains feature parity with the original TypeScript version while leveraging Swift's:
+- Strong type safety
+- Actor-based concurrency model
+- Native performance
+- Better error handling with Swift's Result types
 
 ## License
 
-[MIT](LICENSE)
+MIT License - see LICENSE file for details

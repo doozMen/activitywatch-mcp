@@ -90,6 +90,8 @@ Each tool follows this pattern:
 
 Tools implemented:
 - `list-buckets`: Lists all ActivityWatch buckets with optional filtering
+- `active-buckets`: Finds buckets with activity in a time range
+- `active-folders`: Extracts unique folder paths from window titles
 - `run-query`: Executes AQL queries with format normalization
 - `get-events`: Retrieves raw events from buckets
 - `get-settings`: Accesses ActivityWatch settings

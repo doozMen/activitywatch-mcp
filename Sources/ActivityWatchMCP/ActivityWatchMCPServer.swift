@@ -13,7 +13,7 @@ actor ActivityWatchMCPServer {
         
         self.server = Server(
             name: "activitywatch-mcp-server",
-            version: "2.0.0",
+            version: "2.3.0",
             capabilities: .init(
                 prompts: .init(listChanged: false),
                 resources: nil,
@@ -176,6 +176,108 @@ actor ActivityWatchMCPServer {
                     "type": .string("object"),
                     "properties": .object([:])
                 ])
+            ),
+            
+            Tool(
+                name: "active-buckets",
+                description: """
+                Find all buckets that have activity within a specific time range.
+                This is useful for identifying which watchers/data sources were active during a period.
+                
+                Parameters:
+                - start: Start time in ISO format (e.g., "2024-01-01T00:00:00Z")
+                - end: End time in ISO format (e.g., "2024-01-02T00:00:00Z")
+                - min_events: Minimum number of events to consider bucket active (default: 1)
+                """,
+                inputSchema: .object([
+                    "type": .string("object"),
+                    "properties": .object([
+                        "start": .object([
+                            "type": .string("string"),
+                            "description": .string("Start time in ISO format")
+                        ]),
+                        "end": .object([
+                            "type": .string("string"),
+                            "description": .string("End time in ISO format")
+                        ]),
+                        "min_events": .object([
+                            "type": .string("integer"),
+                            "description": .string("Minimum number of events to consider bucket active"),
+                            "default": .int(1)
+                        ])
+                    ]),
+                    "required": .array([.string("start"), .string("end")])
+                ])
+            ),
+            
+            Tool(
+                name: "active-folders",
+                description: """
+                Extract unique folder paths from window titles during a time period.
+                This analyzes window events to find which folders/directories were accessed.
+                Works best with file managers, terminals, and code editors that show paths in titles.
+                
+                Parameters:
+                - start: Start time in ISO format (e.g., "2024-01-01T00:00:00Z")
+                - end: End time in ISO format (e.g., "2024-01-02T00:00:00Z")
+                - bucket_filter: Optional bucket ID pattern to filter (e.g., "window")
+                """,
+                inputSchema: .object([
+                    "type": .string("object"),
+                    "properties": .object([
+                        "start": .object([
+                            "type": .string("string"),
+                            "description": .string("Start time in ISO format")
+                        ]),
+                        "end": .object([
+                            "type": .string("string"),
+                            "description": .string("End time in ISO format")
+                        ]),
+                        "bucket_filter": .object([
+                            "type": .string("string"),
+                            "description": .string("Optional bucket ID pattern to filter")
+                        ])
+                    ]),
+                    "required": .array([.string("start"), .string("end")])
+                ])
+            ),
+            
+            Tool(
+                name: "get-folder-activity",
+                description: """
+                Get a summary of local folders you've been active in during a time period.
+                Analyzes window titles from terminals, editors, and file managers to extract folder names.
+                
+                Parameters:
+                - start: Start time in ISO format (e.g., "2024-01-01T00:00:00Z")
+                - end: End time in ISO format (e.g., "2024-01-02T00:00:00Z")
+                - includeWeb: Include web URLs as folders (default: false)
+                - minDuration: Minimum duration in seconds to consider a folder active (default: 5)
+                """,
+                inputSchema: .object([
+                    "type": .string("object"),
+                    "properties": .object([
+                        "start": .object([
+                            "type": .string("string"),
+                            "description": .string("Start time in ISO format")
+                        ]),
+                        "end": .object([
+                            "type": .string("string"),
+                            "description": .string("End time in ISO format")
+                        ]),
+                        "includeWeb": .object([
+                            "type": .string("boolean"),
+                            "description": .string("Include web URLs as folders"),
+                            "default": .bool(false)
+                        ]),
+                        "minDuration": .object([
+                            "type": .string("number"),
+                            "description": .string("Minimum duration in seconds to consider a folder active"),
+                            "default": .int(5)
+                        ])
+                    ]),
+                    "required": .array([.string("start"), .string("end")])
+                ])
             )
         ]
     }
@@ -218,6 +320,12 @@ actor ActivityWatchMCPServer {
             return try await handleGetSettings(args: args)
         case "query-examples":
             return handleQueryExamples()
+        case "active-buckets":
+            return try await handleActiveBuckets(args: args)
+        case "active-folders":
+            return try await handleActiveFolders(args: args)
+        case "get-folder-activity":
+            return try await handleGetFolderActivity(args: args)
         default:
             throw MCPError.methodNotFound("Unknown tool: \(name)")
         }
@@ -388,6 +496,251 @@ actor ActivityWatchMCPServer {
         }
     }
     
+    private func handleActiveBuckets(args: [String: Value]) async throws -> CallTool.Result {
+        guard let start = args["start"]?.stringValue else {
+            throw MCPError.invalidParams("start time is required")
+        }
+        guard let end = args["end"]?.stringValue else {
+            throw MCPError.invalidParams("end time is required")
+        }
+        
+        let minEvents = args["min_events"]?.intValue ?? 1
+        
+        do {
+            // First, get all buckets
+            let buckets = try await api.listBuckets()
+            
+            // Check each bucket for activity in the time range
+            var activeBuckets: [(bucket: Bucket, eventCount: Int)] = []
+            
+            for bucket in buckets {
+                do {
+                    // Try to get events for this bucket in the time range
+                    let events = try await api.getEvents(
+                        bucketId: bucket.id,
+                        limit: minEvents + 1, // Just need to know if it has enough events
+                        start: start,
+                        end: end
+                    )
+                    
+                    if events.count >= minEvents {
+                        activeBuckets.append((bucket: bucket, eventCount: events.count))
+                    }
+                } catch {
+                    // Skip buckets that error (might be empty or inaccessible)
+                    logger.debug("Skipping bucket \(bucket.id): \(error)")
+                }
+            }
+            
+            // Sort by event count (most active first)
+            activeBuckets.sort { $0.eventCount > $1.eventCount }
+            
+            // Format response
+            var response = "Found \(activeBuckets.count) active bucket(s) between \(start) and \(end):\n\n"
+            
+            if activeBuckets.isEmpty {
+                response += "No buckets have activity in the specified time range."
+            } else {
+                for (bucket, eventCount) in activeBuckets {
+                    response += "**\(bucket.id)** (\(eventCount) events)\n"
+                    response += "- Type: \(bucket.type)\n"
+                    if let client = bucket.client {
+                        response += "- Client: \(client)\n"
+                    }
+                    if let hostname = bucket.hostname {
+                        response += "- Hostname: \(hostname)\n"
+                    }
+                    response += "\n"
+                }
+                
+                // Add summary by type
+                let bucketsByType = Dictionary(grouping: activeBuckets) { $0.bucket.type }
+                response += "### Summary by Type:\n"
+                for (type, typeBuckets) in bucketsByType.sorted(by: { $0.key < $1.key }) {
+                    let totalEvents = typeBuckets.reduce(0) { $0 + $1.eventCount }
+                    response += "- **\(type)**: \(typeBuckets.count) bucket(s), \(totalEvents) total events\n"
+                }
+            }
+            
+            return CallTool.Result(content: [.text(response)])
+        } catch {
+            logger.error("Failed to find active buckets: \(error)")
+            return CallTool.Result(
+                content: [.text("Failed to find active buckets: \(error.localizedDescription)")],
+                isError: true
+            )
+        }
+    }
+    
+    private func handleActiveFolders(args: [String: Value]) async throws -> CallTool.Result {
+        guard let start = args["start"]?.stringValue else {
+            throw MCPError.invalidParams("start time is required")
+        }
+        guard let end = args["end"]?.stringValue else {
+            throw MCPError.invalidParams("end time is required")
+        }
+        
+        let bucketFilter = args["bucket_filter"]?.stringValue
+        
+        do {
+            // Get all window buckets
+            let buckets = try await api.listBuckets()
+            let windowBuckets = buckets.filter { bucket in
+                // Filter for window watchers
+                if bucket.type == "currentwindow" {
+                    if let filter = bucketFilter {
+                        return bucket.id.contains(filter)
+                    }
+                    return true
+                }
+                return false
+            }
+            
+            // Collect all unique folder paths
+            var folderPaths = Set<String>()
+            var totalEvents = 0
+            
+            for bucket in windowBuckets {
+                do {
+                    let events = try await api.getEvents(
+                        bucketId: bucket.id,
+                        limit: 10000, // Get more events to find all folders
+                        start: start,
+                        end: end
+                    )
+                    
+                    totalEvents += events.count
+                    
+                    // Extract folder paths from window titles
+                    for event in events {
+                        if let title = event.data["title"]?.value as? String {
+                            let paths = extractPaths(from: title)
+                            folderPaths.formUnion(paths)
+                        }
+                    }
+                } catch {
+                    logger.debug("Skipping bucket \(bucket.id): \(error)")
+                }
+            }
+            
+            // Sort paths for better readability
+            let sortedPaths = folderPaths.sorted()
+            
+            // Format response
+            var response = "Found \(sortedPaths.count) unique folder(s) between \(start) and \(end):\n"
+            response += "(Analyzed \(totalEvents) window events from \(windowBuckets.count) bucket(s))\n\n"
+            
+            if sortedPaths.isEmpty {
+                response += "No folder paths found in window titles.\n"
+                response += "This tool works best with:\n"
+                response += "- File managers (Finder, Explorer)\n"
+                response += "- Terminal/console windows\n"
+                response += "- Code editors (VSCode, Xcode, etc.)\n"
+                response += "- Applications that show file paths in window titles"
+            } else {
+                // Group by parent directory for better organization
+                let groupedPaths = Dictionary(grouping: sortedPaths) { path in
+                    // Get the parent directory or root
+                    if let parentRange = path.range(of: "/", options: .backwards) {
+                        return String(path[..<parentRange.lowerBound])
+                    }
+                    return "/"
+                }
+                
+                for (parent, paths) in groupedPaths.sorted(by: { $0.key < $1.key }) {
+                    response += "\n**\(parent)/**\n"
+                    for path in paths.sorted() {
+                        let relativePath = path.replacingOccurrences(of: parent + "/", with: "")
+                        response += "  - \(relativePath)\n"
+                    }
+                }
+                
+                // Add summary
+                response += "\n### Summary:\n"
+                response += "- Total unique folders: \(sortedPaths.count)\n"
+                response += "- Time range: \(start) to \(end)\n"
+                response += "- Window events analyzed: \(totalEvents)\n"
+                
+                // Find most common root directories
+                let rootDirs = Dictionary(grouping: sortedPaths) { path -> String in
+                    let components = path.split(separator: "/")
+                    if components.count > 2 {
+                        return "/" + components[1...2].joined(separator: "/")
+                    }
+                    return "/" + (components.first ?? "")
+                }
+                
+                response += "\n### Most active areas:\n"
+                for (root, paths) in rootDirs.sorted(by: { $0.value.count > $1.value.count }).prefix(5) {
+                    response += "- \(root): \(paths.count) folder(s)\n"
+                }
+            }
+            
+            return CallTool.Result(content: [.text(response)])
+        } catch {
+            logger.error("Failed to find active folders: \(error)")
+            return CallTool.Result(
+                content: [.text("Failed to find active folders: \(error.localizedDescription)")],
+                isError: true
+            )
+        }
+    }
+    
+    // Helper function to extract paths from window titles
+    private func extractPaths(from title: String) -> Set<String> {
+        var paths = Set<String>()
+        
+        // Common patterns for paths in window titles
+        let patterns = [
+            // Unix/Mac paths
+            #"(/(?:Users|home|var|tmp|opt|usr|Applications|System|Library|Volumes|private|etc|Users/[^/]+/[^/\s]+)[^:\s]*)"#,
+            // Code editor patterns (VSCode, Xcode, etc.)
+            #"(?:^|[\s—–-]+)(/[^—–\s]+(?:/[^—–\s]+)*)"#,
+            // Terminal/Shell patterns
+            #"(?:^|[\s:~])(/[^\s:]+(?:/[^\s:]+)*)"#,
+            // File manager patterns
+            #"(?:^|\s)(/[^|<>:"\s]+(?:/[^|<>:"\s]+)*)"#
+        ]
+        
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                let matches = regex.matches(in: title, options: [], range: NSRange(title.startIndex..., in: title))
+                
+                for match in matches {
+                    if let range = Range(match.range(at: 1), in: title) {
+                        let path = String(title[range])
+                        
+                        // Clean up the path
+                        let cleanPath = path
+                            .replacingOccurrences(of: "//", with: "/")
+                            .trimmingCharacters(in: .whitespaces)
+                        
+                        // Validate it's a reasonable path
+                        if cleanPath.count > 3 && 
+                           cleanPath.hasPrefix("/") &&
+                           !cleanPath.contains("...") &&
+                           cleanPath.split(separator: "/").count > 1 {
+                            
+                            // For files, get the directory
+                            if !cleanPath.hasSuffix("/") && cleanPath.contains(".") {
+                                if let lastSlash = cleanPath.lastIndex(of: "/") {
+                                    let dirPath = String(cleanPath[..<lastSlash])
+                                    if dirPath.count > 1 {
+                                        paths.insert(dirPath)
+                                    }
+                                }
+                            } else {
+                                paths.insert(cleanPath)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return paths
+    }
+    
     private func handleQueryExamples() -> CallTool.Result {
         let examples = """
         # ActivityWatch Query Language (AQL) Examples
@@ -537,6 +890,114 @@ actor ActivityWatchMCPServer {
         )
     }
     
+    private func handleGetFolderActivity(args: [String: Value]) async throws -> CallTool.Result {
+        guard let start = args["start"]?.stringValue else {
+            throw MCPError.invalidParams("start time is required")
+        }
+        guard let end = args["end"]?.stringValue else {
+            throw MCPError.invalidParams("end time is required")
+        }
+        
+        let includeWeb = args["includeWeb"]?.boolValue ?? false
+        let minDuration = args["minDuration"]?.doubleValue ?? 5.0
+        
+        do {
+            // Get all window buckets
+            let buckets = try await api.listBuckets()
+            let windowBuckets = buckets.filter { bucket in
+                bucket.type == "currentwindow"
+            }
+            
+            // Create the analyzer
+            let analyzer = FolderActivityAnalyzer(logger: logger)
+            
+            // Collect all window events
+            var allEvents: [[String: AnyCodable]] = []
+            var totalEvents = 0
+            
+            for bucket in windowBuckets {
+                do {
+                    let events = try await api.getEvents(
+                        bucketId: bucket.id,
+                        limit: 10000,
+                        start: start,
+                        end: end
+                    )
+                    
+                    totalEvents += events.count
+                    
+                    // Convert Event objects to dictionary format for the analyzer
+                    for event in events {
+                        var eventDict: [String: AnyCodable] = [:]
+                        eventDict["timestamp"] = AnyCodable(event.timestamp)
+                        eventDict["duration"] = AnyCodable(event.duration)
+                        eventDict["data"] = AnyCodable(event.data.mapValues { $0.value })
+                        if let id = event.id {
+                            eventDict["id"] = AnyCodable(id)
+                        }
+                        allEvents.append(eventDict)
+                    }
+                } catch {
+                    logger.debug("Skipping bucket \(bucket.id): \(error)")
+                }
+            }
+            
+            // Analyze folder activity
+            let folderActivities = await analyzer.analyzeFolderActivity(
+                from: allEvents,
+                includeWeb: includeWeb
+            ).filter { $0.totalDuration >= minDuration }
+            
+            // Format response
+            var response = "# Folder Activity Summary\n\n"
+            response += "Time range: \(start) to \(end)\n"
+            response += "Total events analyzed: \(totalEvents)\n"
+            response += "Folders found: \(folderActivities.count)\n\n"
+            
+            if folderActivities.isEmpty {
+                response += "No folder activity found in the specified time range.\n"
+            } else {
+                // Group by application
+                let byApp = Dictionary(grouping: folderActivities) { $0.application }
+                
+                response += "## Folders by Application\n\n"
+                
+                for (app, activities) in byApp.sorted(by: { $0.key < $1.key }) {
+                    response += "### \(app)\n\n"
+                    
+                    for activity in activities.sorted(by: { $0.totalDuration > $1.totalDuration }) {
+                        response += "- **\(activity.path)**"
+                        if let context = activity.context {
+                            response += " (\(context))"
+                        }
+                        response += "\n"
+                        response += "  - Time: \(activity.formattedDuration)\n"
+                        response += "  - Events: \(activity.eventCount)\n\n"
+                    }
+                }
+                
+                // Overall summary
+                response += "## Top 10 Most Active Folders\n\n"
+                
+                for (index, activity) in folderActivities.prefix(10).enumerated() {
+                    response += "\(index + 1). **\(activity.path)** - \(activity.formattedDuration) (\(activity.application))"
+                    if let context = activity.context {
+                        response += " [\(context)]"
+                    }
+                    response += "\n"
+                }
+            }
+            
+            return CallTool.Result(content: [.text(response)])
+        } catch {
+            logger.error("Failed to get folder activity: \(error)")
+            return CallTool.Result(
+                content: [.text("Failed to get folder activity: \(error.localizedDescription)")],
+                isError: true
+            )
+        }
+    }
+    
     // Helper functions
     private func normalizeQueryInputs(args: [String: Value]) throws -> ([String], [String]) {
         // Extract timeperiods
@@ -623,6 +1084,16 @@ extension Value {
     var boolValue: Bool? {
         if case .bool(let bool) = self {
             return bool
+        }
+        return nil
+    }
+    
+    var doubleValue: Double? {
+        if case .double(let num) = self {
+            return num
+        }
+        if case .int(let num) = self {
+            return Double(num)
         }
         return nil
     }
