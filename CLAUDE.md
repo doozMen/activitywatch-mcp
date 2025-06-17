@@ -51,7 +51,7 @@ swift run activitywatch-mcp --log-level debug --server-url http://localhost:5600
 
 ```bash
 # Use the install script
-./install-activitywatch-mcp.sh
+./install.sh
 
 # Or manually install
 swift build -c release

@@ -2,12 +2,24 @@ import Foundation
 import MCP
 import Logging
 
+/// ActivityWatch MCP Server implementation that provides structured access to ActivityWatch data
+/// through the Model Context Protocol.
+///
+/// This server wraps the ActivityWatch REST API and exposes it through MCP tools,
+/// allowing AI assistants to query time tracking data, analyze productivity patterns,
+/// and extract insights from computer usage.
 actor ActivityWatchMCPServer {
     private let server: Server
     private let api: ActivityWatchAPI
     private let logger: Logger
     private let version = "2.3.1"
     
+    /// Initializes a new ActivityWatch MCP Server instance.
+    ///
+    /// - Parameters:
+    ///   - logger: Logger instance for server operations
+    ///   - serverUrl: The URL of the ActivityWatch server (e.g., "http://localhost:5600")
+    /// - Throws: An error if server initialization fails
     init(logger: Logger, serverUrl: String) throws {
         self.logger = logger
         self.api = ActivityWatchAPI(logger: logger, serverUrl: serverUrl)
@@ -23,6 +35,10 @@ actor ActivityWatchMCPServer {
         )
     }
     
+    /// Starts the MCP server and waits for incoming requests.
+    ///
+    /// This method sets up all handlers, creates a stdio transport,
+    /// and runs the server until it's terminated.
     func run() async throws {
         await setupHandlers()
         let transport = StdioTransport()
@@ -30,6 +46,9 @@ actor ActivityWatchMCPServer {
         await server.waitUntilCompleted()
     }
     
+    // MARK: - Handler Setup
+    
+    /// Sets up all MCP protocol handlers for tools, prompts, and capabilities.
     private func setupHandlers() async {
         // List tools
         await server.withMethodHandler(ListTools.self) { [weak self] _ in

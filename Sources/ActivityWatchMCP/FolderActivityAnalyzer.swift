@@ -1,14 +1,24 @@
 import Foundation
 import Logging
 
+/// Represents activity metrics for a specific folder or directory.
 struct FolderActivity {
+    /// Absolute path to the folder
     let path: String
+    /// Application where the folder was accessed
     let application: String
+    /// Optional context information (e.g., "project = side-project")
     let context: String?
+    /// Total time spent in this folder (in seconds)
     let totalDuration: Double
+    /// Number of events recorded for this folder
     let eventCount: Int
 }
 
+/// Analyzes window title events to extract folder activity patterns.
+///
+/// This analyzer processes ActivityWatch window events and identifies local folder
+/// access patterns from various applications like terminals, editors, and file managers.
 actor FolderActivityAnalyzer {
     private let logger: Logger
     
@@ -16,7 +26,16 @@ actor FolderActivityAnalyzer {
         self.logger = logger
     }
     
-    /// Extract folder activities from window events
+    /// Extracts folder activities from window events.
+    ///
+    /// This method analyzes window titles from various applications to identify
+    /// which folders were accessed and for how long. It supports multiple patterns
+    /// including terminal paths, editor project indicators, and file manager locations.
+    ///
+    /// - Parameters:
+    ///   - events: Array of event dictionaries from ActivityWatch
+    ///   - includeWeb: Whether to include web URLs as folders (default: false)
+    /// - Returns: Array of FolderActivity objects sorted by total duration
     func analyzeFolderActivity(from events: [[String: AnyCodable]], includeWeb: Bool = false) -> [FolderActivity] {
         var folderMap: [String: FolderActivity] = [:]
         

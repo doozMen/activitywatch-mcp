@@ -4,35 +4,62 @@ import NIOCore
 import NIOHTTP1
 import Logging
 
+// MARK: - Data Models
+
+/// Represents an ActivityWatch bucket that stores events of a specific type.
 struct Bucket: Codable, Sendable {
+    /// Unique identifier for the bucket
     let id: String
+    /// Human-readable name for the bucket
     let name: String?
+    /// Type of events stored (e.g., "window", "afk", "web")
     let type: String
+    /// Client/watcher that created this bucket
     let client: String?
+    /// Hostname where the bucket was created
     let hostname: String?
+    /// ISO timestamp when the bucket was created
     let created: String?
+    /// Additional data associated with the bucket
     let data: [String: AnyCodable]?
+    /// Metadata about the bucket
     let metadata: [String: AnyCodable]?
+    /// ISO timestamp of last update
     let last_updated: String?
 }
 
+/// Represents a single time-tracking event in ActivityWatch.
 struct Event: Codable, Sendable {
+    /// Unique identifier for the event
     let id: Int64?
+    /// ISO timestamp when the event occurred
     let timestamp: String
+    /// Duration of the event in seconds
     let duration: Double
+    /// Event-specific data (e.g., window title, app name)
     let data: [String: AnyCodable]
 }
 
+/// Represents an AQL (ActivityWatch Query Language) query request.
 struct Query: Codable, Sendable {
+    /// Time periods to query (e.g., ["2024-01-01T00:00:00/2024-01-02T00:00:00"])
     let timeperiods: [String]
+    /// AQL query statements
     let query: [String]
 }
 
+/// Result of executing an AQL query.
 struct QueryResult: Codable, Sendable {
+    /// Array of event arrays (one per query statement)
     let result: [[Event]]
 }
 
-// Helper for encoding/decoding arbitrary JSON
+// MARK: - Helper Types
+
+/// Type-erased container for encoding/decoding arbitrary JSON values.
+///
+/// This wrapper allows us to work with ActivityWatch's flexible JSON responses
+/// where the structure may vary based on the event type or bucket configuration.
 struct AnyCodable: Codable, @unchecked Sendable {
     let value: Any
     
@@ -82,11 +109,22 @@ struct AnyCodable: Codable, @unchecked Sendable {
     }
 }
 
+// MARK: - ActivityWatch API Client
+
+/// Actor-based HTTP client for interacting with the ActivityWatch REST API.
+///
+/// This client provides thread-safe access to ActivityWatch endpoints and handles
+/// all HTTP communication, JSON encoding/decoding, and error handling.
 actor ActivityWatchAPI {
     private let client: HTTPClient
     private let logger: Logger
     private let baseURL: String
     
+    /// Initializes a new ActivityWatch API client.
+    ///
+    /// - Parameters:
+    ///   - logger: Logger instance for API operations
+    ///   - serverUrl: Base URL of the ActivityWatch server (e.g., "http://localhost:5600")
     init(logger: Logger, serverUrl: String) {
         self.logger = logger
         self.baseURL = "\(serverUrl)/api/0"
@@ -97,6 +135,10 @@ actor ActivityWatchAPI {
         try? client.syncShutdown()
     }
     
+    /// Fetches all buckets from the ActivityWatch server.
+    ///
+    /// - Returns: Array of Bucket objects
+    /// - Throws: ActivityWatchError if the request fails
     func listBuckets() async throws -> [Bucket] {
         let url = "\(baseURL)/buckets"
         logger.debug("Fetching buckets from: \(url)")
@@ -119,6 +161,15 @@ actor ActivityWatchAPI {
         return Array(bucketDict.values)
     }
     
+    /// Retrieves events from a specific bucket.
+    ///
+    /// - Parameters:
+    ///   - bucketId: The ID of the bucket to query
+    ///   - limit: Maximum number of events to return (optional)
+    ///   - start: Start time in ISO format (optional)
+    ///   - end: End time in ISO format (optional)
+    /// - Returns: Array of Event objects
+    /// - Throws: ActivityWatchError if the request fails
     func getEvents(bucketId: String, limit: Int? = nil, start: String? = nil, end: String? = nil) async throws -> [Event] {
         var url = "\(baseURL)/buckets/\(bucketId)/events"
         var params: [String] = []
@@ -156,6 +207,13 @@ actor ActivityWatchAPI {
         return try decoder.decode([Event].self, from: body)
     }
     
+    /// Executes an AQL (ActivityWatch Query Language) query.
+    ///
+    /// - Parameters:
+    ///   - timeperiods: Array of ISO date ranges (e.g., ["2024-01-01T00:00:00/2024-01-02T00:00:00"])
+    ///   - query: Array of AQL statements to execute
+    /// - Returns: Array of event arrays (one per query statement)
+    /// - Throws: ActivityWatchError if the query fails
     func runQuery(timeperiods: [String], query: [String]) async throws -> [[Event]] {
         let url = "\(baseURL)/query"
         let queryData = Query(timeperiods: timeperiods, query: query)
@@ -213,9 +271,15 @@ actor ActivityWatchAPI {
     }
 }
 
+// MARK: - Errors
+
+/// Errors that can occur when interacting with the ActivityWatch API.
 enum ActivityWatchError: Error, LocalizedError {
+    /// HTTP request failed with a specific status code
     case httpError(status: Int, message: String)
+    /// Response data could not be parsed or was invalid
     case invalidResponse(String)
+    /// Network connection error
     case connectionError(String)
     
     var errorDescription: String? {

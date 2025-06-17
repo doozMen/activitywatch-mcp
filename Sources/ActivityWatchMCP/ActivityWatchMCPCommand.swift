@@ -2,6 +2,15 @@ import ArgumentParser
 import Foundation
 import Logging
 
+/// Command-line interface for the ActivityWatch MCP Server.
+///
+/// This executable provides a Model Context Protocol server that connects to
+/// ActivityWatch and exposes its time tracking data to AI assistants like Claude.
+///
+/// ## Usage
+/// ```bash
+/// activitywatch-mcp --log-level debug --server-url http://localhost:5600
+/// ```
 @main
 struct ActivityWatchMCPCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
