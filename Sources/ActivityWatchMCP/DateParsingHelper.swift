@@ -41,7 +41,8 @@ enum DateParsingHelper {
     /// Parse a date range from natural language or explicit start/end
     static func parseDateRange(start: String?, end: String?) throws -> (start: String, end: String) {
         let now = Date()
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(identifier: "UTC")!
         
         // Handle common patterns
         if let start = start, start.lowercased() == "today" && end == nil {
@@ -105,7 +106,8 @@ enum DateParsingHelper {
         } else if components.count == 1 {
             // Single date - assume full day
             let date = try parseDate(components[0])
-            let calendar = Calendar.current
+            var calendar = Calendar.current
+            calendar.timeZone = TimeZone(identifier: "UTC")!
             let startOfDay = calendar.startOfDay(for: date)
             let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
             
