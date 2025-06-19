@@ -1,6 +1,7 @@
 import Foundation
 import MCP
 import Logging
+import SwiftDateParser
 
 /// ActivityWatch MCP Server implementation that provides structured access to ActivityWatch data
 /// through the Model Context Protocol.
@@ -110,16 +111,21 @@ actor ActivityWatchMCPServer {
                 Execute an AQL (ActivityWatch Query Language) query.
                 
                 Parameters:
-                - timeperiods: Array of ISO 8601 date ranges separated by "/" (e.g., ["2024-01-01T00:00:00+00:00/2024-01-02T00:00:00+00:00"])
+                - timeperiods: Array of date ranges (natural language or ISO 8601 separated by "/")
                 - query: Array of AQL statements joined by semicolons
                 
-                Date format for timeperiods:
-                - Use +00:00 or Z for UTC: "2024-01-01T00:00:00+00:00" or "2024-01-01T00:00:00Z"
-                - With timezone offset: "2024-01-01T09:00:00+01:00" (CET)
-                - Range format: "start/end" (e.g., "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z")
+                Natural language timeperiod examples:
+                - ["today"] - Query today's data
+                - ["yesterday"] - Query yesterday's data
+                - ["this week"] - Query this week
+                - ["monday/friday"] - Query Monday to Friday
+                - ["3 days ago/yesterday"] - Custom range
+                
+                ISO 8601 format also supported:
+                - ["2024-01-01T00:00:00Z/2024-01-02T00:00:00Z"]
                 
                 Example:
-                timeperiods: ["2024-10-28T00:00:00+00:00/2024-10-29T00:00:00+00:00"]
+                timeperiods: ["today"]
                 query: ["events = query_bucket('aw-watcher-window_hostname'); RETURN = events;"]
                 """,
                 inputSchema: .object([
@@ -128,7 +134,7 @@ actor ActivityWatchMCPServer {
                         "timeperiods": .object([
                             "type": .string("array"),
                             "items": .object(["type": .string("string")]),
-                            "description": .string("Array of ISO 8601 time period ranges in format: start/end")
+                            "description": .string("Array of time period ranges - natural language or ISO 8601 (format: start/end)")
                         ]),
                         "query": .object([
                             "type": .string("array"),
@@ -148,12 +154,14 @@ actor ActivityWatchMCPServer {
                 Parameters:
                 - bucket_id: The ID of the bucket to query
                 - limit: Maximum number of events to return (optional)
-                - start: Start time in ISO 8601 format (optional, e.g., "2024-01-01T00:00:00Z")
-                - end: End time in ISO 8601 format (optional, e.g., "2024-01-01T23:59:59Z")
+                - start: Start time - natural language or ISO 8601 (optional)
+                - end: End time - natural language or ISO 8601 (optional)
                 
-                Date format examples:
-                - UTC: "2024-01-15T14:30:00Z"
-                - With offset: "2024-01-15T09:30:00-05:00" (EST)
+                Natural language examples:
+                - start="today" - Today's events
+                - start="yesterday", end="today" - Yesterday's events
+                - start="1 hour ago" - Events from the last hour
+                - start="last monday" - Events since last Monday
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
@@ -168,11 +176,11 @@ actor ActivityWatchMCPServer {
                         ]),
                         "start": .object([
                             "type": .string("string"),
-                            "description": .string("Start time in ISO 8601 format (e.g., 2024-01-01T00:00:00Z)")
+                            "description": .string("Start time - natural language (\"today\", \"yesterday\") or ISO 8601")
                         ]),
                         "end": .object([
                             "type": .string("string"),
-                            "description": .string("End time in ISO 8601 format (e.g., 2024-01-01T23:59:59Z)")
+                            "description": .string("End time - natural language or ISO 8601 (optional)")
                         ])
                     ]),
                     "required": .array([.string("bucket_id")])
@@ -214,24 +222,29 @@ actor ActivityWatchMCPServer {
                 This is useful for identifying which watchers/data sources were active during a period.
                 
                 Parameters:
-                - start: Start time in ISO 8601 format (e.g., "2024-01-01T00:00:00Z" for UTC, "2024-01-01T09:00:00+01:00" for CET)
-                - end: End time in ISO 8601 format (e.g., "2024-01-02T00:00:00Z" for UTC)
+                - start: Start time (supports natural language like "today", "yesterday", "3 days ago", or ISO 8601)
+                - end: End time (optional - defaults to end of start day if omitted)
                 - min_events: Minimum number of events to consider bucket active (default: 1)
                 
-                Example usage:
-                - Today (UTC): start="2024-01-15T00:00:00Z", end="2024-01-15T23:59:59Z"
-                - Last 7 days: start="2024-01-08T00:00:00Z", end="2024-01-15T23:59:59Z"
+                Natural language examples:
+                - start="today" - Gets today's active buckets
+                - start="yesterday" - Gets yesterday's data
+                - start="last week" - Gets last week's data
+                - start="3 days ago", end="yesterday" - Custom range
+                
+                ISO 8601 format also supported:
+                - start="2024-01-15T00:00:00Z", end="2024-01-15T23:59:59Z"
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "start": .object([
                             "type": .string("string"),
-                            "description": .string("Start time in ISO 8601 format (e.g., 2024-01-01T00:00:00Z)")
+                            "description": .string("Start time - natural language (\"today\", \"yesterday\") or ISO 8601")
                         ]),
                         "end": .object([
                             "type": .string("string"),
-                            "description": .string("End time in ISO 8601 format (e.g., 2024-01-01T23:59:59Z)")
+                            "description": .string("End time - natural language or ISO 8601 (optional)")
                         ]),
                         "min_events": .object([
                             "type": .string("integer"),
@@ -251,25 +264,26 @@ actor ActivityWatchMCPServer {
                 Works best with file managers, terminals, and code editors that show paths in titles.
                 
                 Parameters:
-                - start: Start time in ISO 8601 format (e.g., "2024-01-01T00:00:00Z" for UTC)
-                - end: End time in ISO 8601 format (e.g., "2024-01-02T00:00:00Z" for UTC)
+                - start: Start time (supports natural language like "today", "yesterday", or ISO 8601)
+                - end: End time (optional - defaults to end of start day if omitted)
                 - bucket_filter: Optional bucket ID pattern to filter (e.g., "window")
                 
-                Date format examples:
-                - UTC: "2024-01-15T00:00:00Z"
-                - With timezone: "2024-01-15T09:00:00+01:00" (CET)
-                - Always include timezone (Z for UTC or +/-HH:MM)
+                Natural language examples:
+                - start="today" - Today's folders
+                - start="yesterday" - Yesterday's folders
+                - start="this week" - This week's folders
+                - start="2 hours ago", end="now" - Recent activity
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "start": .object([
                             "type": .string("string"),
-                            "description": .string("Start time in ISO 8601 format (e.g., 2024-01-01T00:00:00Z)")
+                            "description": .string("Start time - natural language (\"today\", \"yesterday\") or ISO 8601")
                         ]),
                         "end": .object([
                             "type": .string("string"),
-                            "description": .string("End time in ISO 8601 format (e.g., 2024-01-01T23:59:59Z)")
+                            "description": .string("End time - natural language or ISO 8601 (optional)")
                         ]),
                         "bucket_filter": .object([
                             "type": .string("string"),
@@ -287,26 +301,28 @@ actor ActivityWatchMCPServer {
                 Analyzes window titles from terminals, editors, and file managers to extract folder names.
                 
                 Parameters:
-                - start: Start time in ISO 8601 format (e.g., "2024-01-01T00:00:00Z" for UTC)
-                - end: End time in ISO 8601 format (e.g., "2024-01-02T00:00:00Z" for UTC)
+                - start: Start time (natural language or ISO 8601)
+                - end: End time (optional - defaults to end of start day)
                 - includeWeb: Include web URLs as folders (default: false)
                 - minDuration: Minimum duration in seconds to consider a folder active (default: 5)
                 
-                Common date patterns:
-                - Today (UTC): start="2024-01-15T00:00:00Z", end="2024-01-15T23:59:59Z"
-                - This week: start="2024-01-15T00:00:00Z", end="2024-01-21T23:59:59Z"
-                - With timezone: "2024-01-15T09:00:00-05:00" (EST)
+                Natural language examples:
+                - start="today" - Today's folder activity
+                - start="yesterday" - Yesterday's activity
+                - start="this week" - This week's folders
+                - start="monday", end="friday" - Work week activity
+                - start="3 hours ago" - Recent folder activity
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "start": .object([
                             "type": .string("string"),
-                            "description": .string("Start time in ISO 8601 format (e.g., 2024-01-01T00:00:00Z)")
+                            "description": .string("Start time - natural language (\"today\", \"yesterday\") or ISO 8601")
                         ]),
                         "end": .object([
                             "type": .string("string"),
-                            "description": .string("End time in ISO 8601 format (e.g., 2024-01-01T23:59:59Z)")
+                            "description": .string("End time - natural language or ISO 8601 (optional)")
                         ]),
                         "includeWeb": .object([
                             "type": .string("boolean"),
@@ -480,8 +496,18 @@ actor ActivityWatchMCPServer {
         }
         
         let limit = args["limit"]?.intValue
-        let start = args["start"]?.stringValue
-        let end = args["end"]?.stringValue
+        let startStr = args["start"]?.stringValue
+        let endStr = args["end"]?.stringValue
+        
+        // Parse dates if provided
+        var start: String? = nil
+        var end: String? = nil
+        
+        if startStr != nil || endStr != nil {
+            let (parsedStart, parsedEnd) = try DateParsingHelper.parseDateRange(start: startStr, end: endStr)
+            start = parsedStart
+            end = parsedEnd
+        }
         
         do {
             let events = try await api.getEvents(
@@ -551,12 +577,11 @@ actor ActivityWatchMCPServer {
     }
     
     private func handleActiveBuckets(args: [String: Value]) async throws -> CallTool.Result {
-        guard let start = args["start"]?.stringValue else {
-            throw MCPError.invalidParams("start time is required")
-        }
-        guard let end = args["end"]?.stringValue else {
-            throw MCPError.invalidParams("end time is required")
-        }
+        let startStr = args["start"]?.stringValue
+        let endStr = args["end"]?.stringValue
+        
+        // Parse dates using natural language
+        let (start, end) = try DateParsingHelper.parseDateRange(start: startStr, end: endStr)
         
         let minEvents = args["min_events"]?.intValue ?? 1
         
@@ -627,12 +652,11 @@ actor ActivityWatchMCPServer {
     }
     
     private func handleActiveFolders(args: [String: Value]) async throws -> CallTool.Result {
-        guard let start = args["start"]?.stringValue else {
-            throw MCPError.invalidParams("start time is required")
-        }
-        guard let end = args["end"]?.stringValue else {
-            throw MCPError.invalidParams("end time is required")
-        }
+        let startStr = args["start"]?.stringValue
+        let endStr = args["end"]?.stringValue
+        
+        // Parse dates using natural language
+        let (start, end) = try DateParsingHelper.parseDateRange(start: startStr, end: endStr)
         
         let bucketFilter = args["bucket_filter"]?.stringValue
         
@@ -808,24 +832,29 @@ actor ActivityWatchMCPServer {
         - **Multiple periods**: `["2024-01-01T00:00:00Z/2024-01-02T00:00:00Z", "2024-01-15T00:00:00Z/2024-01-16T00:00:00Z"]`
         
         ### Common Date Patterns
-        - **Today (UTC)**: `"2024-01-15T00:00:00Z/2024-01-16T00:00:00Z"`
-        - **This week**: `"2024-01-15T00:00:00Z/2024-01-22T00:00:00Z"`
-        - **Last 30 days**: `"2023-12-16T00:00:00Z/2024-01-16T00:00:00Z"`
-        - **With timezone (CET)**: `"2024-01-15T00:00:00+01:00/2024-01-16T00:00:00+01:00"`
+        When instructing the AI to query ActivityWatch, use these relative descriptions:
+        - **"Get today's data"** → AI should calculate today's date for the time period
+        - **"Show this week"** → AI should calculate Monday to Sunday of current week
+        - **"Last 30 days"** → AI should calculate from 30 days ago to today
+        - **"Yesterday"** → AI should calculate yesterday's full day range
+        
+        The AI will convert these to proper ISO 8601 format with the current date.
         
         ## Basic Queries
         
         ### Get all window events for today
         ```
-        timeperiods: ["2024-10-28T00:00:00+00:00/2024-10-29T00:00:00+00:00"]
+        timeperiods: ["<today>T00:00:00+00:00/<tomorrow>T00:00:00+00:00"]
         query: ["events = query_bucket('aw-watcher-window_hostname'); RETURN = events;"]
         ```
+        Note: Replace <today> and <tomorrow> with actual dates
         
         ### Get AFK (Away From Keyboard) events
         ```
-        timeperiods: ["2024-10-28T00:00:00+00:00/2024-10-29T00:00:00+00:00"]
+        timeperiods: ["<today>T00:00:00+00:00/<tomorrow>T00:00:00+00:00"]
         query: ["events = query_bucket('aw-watcher-afk_hostname'); RETURN = events;"]
         ```
+        Note: The AI should calculate the actual dates based on the current date
         
         ## Advanced Queries
         
@@ -966,12 +995,11 @@ actor ActivityWatchMCPServer {
     }
     
     private func handleGetFolderActivity(args: [String: Value]) async throws -> CallTool.Result {
-        guard let start = args["start"]?.stringValue else {
-            throw MCPError.invalidParams("start time is required")
-        }
-        guard let end = args["end"]?.stringValue else {
-            throw MCPError.invalidParams("end time is required")
-        }
+        let startStr = args["start"]?.stringValue
+        let endStr = args["end"]?.stringValue
+        
+        // Parse dates using natural language
+        let (start, end) = try DateParsingHelper.parseDateRange(start: startStr, end: endStr)
         
         let includeWeb = args["includeWeb"]?.boolValue ?? false
         let minDuration = args["minDuration"]?.doubleValue ?? 5.0
@@ -1076,15 +1104,20 @@ actor ActivityWatchMCPServer {
     // Helper functions
     private func normalizeQueryInputs(args: [String: Value]) throws -> ([String], [String]) {
         // Extract timeperiods
-        let timeperiods: [String]
+        let rawTimeperiods: [String]
         switch args["timeperiods"] {
         case .array(let array):
-            timeperiods = array.compactMap { $0.stringValue }
+            rawTimeperiods = array.compactMap { $0.stringValue }
         case .string(let str):
             // Handle single string input
-            timeperiods = [str]
+            rawTimeperiods = [str]
         default:
             throw MCPError.invalidParams("timeperiods must be an array of strings")
+        }
+        
+        // Parse time periods using natural language
+        let timeperiods = try rawTimeperiods.map { period in
+            try DateParsingHelper.parseTimePeriod(period)
         }
         
         // Extract query

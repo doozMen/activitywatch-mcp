@@ -100,17 +100,27 @@ Use get-events tool with:
 ### Active Buckets
 ```
 Use active-buckets tool with:
-- start: "2024-01-01T00:00:00Z"
-- end: "2024-01-02T00:00:00Z"
+- start: "today" or "yesterday" or "3 days ago"
+- end: Optional (defaults to end of start day)
 - Optional: min_events (default: 1)
+
+Examples:
+- start="today" - Today's active buckets
+- start="yesterday" - Yesterday's data
+- start="this week" - This week's activity
 ```
 
 ### Active Folders
 ```
 Use active-folders tool with:
-- start: "2024-01-01T00:00:00Z"
-- end: "2024-01-02T00:00:00Z"
+- start: Natural language or ISO 8601 date
+- end: Optional
 - Optional: bucket_filter (to filter bucket IDs)
+
+Examples:
+- start="today" - Today's folder access
+- start="2 hours ago", end="now" - Recent folders
+- start="last monday" - Since last Monday
 
 Extracts folder paths from window titles in file managers, terminals, and editors.
 ```
@@ -118,10 +128,15 @@ Extracts folder paths from window titles in file managers, terminals, and editor
 ### Get Folder Activity
 ```
 Use get-folder-activity tool with:
-- start: "2024-01-01T00:00:00Z"
-- end: "2024-01-02T00:00:00Z"
+- start: Natural language or ISO 8601 date
+- end: Optional
 - Optional: includeWeb (include web URLs as folders, default: false)
 - Optional: minDuration (minimum seconds to consider active, default: 5)
+
+Examples:
+- start="yesterday" - Yesterday's folder activity
+- start="this week" - This week's folders
+- start="monday", end="friday" - Work week activity
 
 Provides a comprehensive summary of local folder activity including:
 - Time spent in each folder
@@ -143,25 +158,38 @@ ActivityWatch uses ISO 8601 format for all date and time parameters. Here's a co
 ### Basic Format
 All dates must be in ISO 8601 format with timezone information:
 - **Full format**: `YYYY-MM-DDTHH:MM:SSZ` or `YYYY-MM-DDTHH:MM:SS+HH:MM`
-- **Date part**: Year-Month-Day (e.g., `2024-01-15`)
-- **Time part**: Hour:Minute:Second (e.g., `14:30:00`)
+- **Date part**: Year-Month-Day
+- **Time part**: Hour:Minute:Second
 - **Separator**: Use `T` between date and time
 - **Timezone**: Use `Z` for UTC or `+HH:MM`/`-HH:MM` for offset
 
-### Examples by Timezone
+### Relative Date Examples
 
-#### UTC (Recommended)
+When instructing AI assistants to query ActivityWatch, use these relative date descriptions:
+
+#### Common Time Periods
 ```
-- Today at midnight: 2024-01-15T00:00:00Z
-- Today at noon: 2024-01-15T12:00:00Z
-- Today at 11:59 PM: 2024-01-15T23:59:59Z
+- "Get today's activities" → start: today at 00:00:00Z, end: today at 23:59:59Z
+- "Show yesterday's data" → start: yesterday at 00:00:00Z, end: yesterday at 23:59:59Z
+- "Last 7 days" → start: 7 days ago at 00:00:00Z, end: today at 23:59:59Z
+- "This week" → start: Monday of this week at 00:00:00Z, end: Sunday at 23:59:59Z
+- "Last month" → start: first day of last month at 00:00:00Z, end: last day of last month at 23:59:59Z
 ```
 
-#### With Timezone Offset
+#### Examples by Timezone
+
+##### UTC (Recommended)
 ```
-- Eastern Time (EST, -05:00): 2024-01-15T09:00:00-05:00
-- Central European Time (CET, +01:00): 2024-01-15T09:00:00+01:00
-- Japan Standard Time (JST, +09:00): 2024-01-15T09:00:00+09:00
+- Today at midnight: <current_date>T00:00:00Z
+- Today at noon: <current_date>T12:00:00Z
+- Today at 11:59 PM: <current_date>T23:59:59Z
+```
+
+##### With Timezone Offset
+```
+- Eastern Time (EST, -05:00): <current_date>T09:00:00-05:00
+- Central European Time (CET, +01:00): <current_date>T09:00:00+01:00
+- Japan Standard Time (JST, +09:00): <current_date>T09:00:00+09:00
 ```
 
 ### Common Query Patterns
@@ -169,24 +197,24 @@ All dates must be in ISO 8601 format with timezone information:
 #### Get Today's Data (UTC)
 ```json
 {
-  "start": "2024-01-15T00:00:00Z",
-  "end": "2024-01-15T23:59:59Z"
+  "start": "<today>T00:00:00Z",
+  "end": "<today>T23:59:59Z"
 }
 ```
 
 #### Get This Week's Data
 ```json
 {
-  "start": "2024-01-15T00:00:00Z",
-  "end": "2024-01-21T23:59:59Z"
+  "start": "<monday_of_this_week>T00:00:00Z",
+  "end": "<sunday_of_this_week>T23:59:59Z"
 }
 ```
 
 #### Get Last 7 Days
 ```json
 {
-  "start": "2024-01-08T00:00:00Z",
-  "end": "2024-01-15T23:59:59Z"
+  "start": "<7_days_ago>T00:00:00Z",
+  "end": "<today>T23:59:59Z"
 }
 ```
 
@@ -194,7 +222,7 @@ All dates must be in ISO 8601 format with timezone information:
 The `run-query` tool uses a slightly different format for time periods:
 ```json
 {
-  "timeperiods": ["2024-01-15T00:00:00+00:00/2024-01-16T00:00:00+00:00"],
+  "timeperiods": ["<start_date>T00:00:00+00:00/<end_date>T00:00:00+00:00"],
   "query": ["..."]
 }
 ```
@@ -209,6 +237,16 @@ Note the:
 2. **Use UTC when possible** - Simplifies calculations and avoids DST issues
 3. **Be consistent** - Stick to one format throughout your queries
 4. **Check your system time** - Ensure your computer's clock is correctly set
+
+### Natural Language Date Support
+This MCP server integrates [SwiftDateParser](https://github.com/doozMen/dateutil-swift) to support natural language date queries:
+- "Show me what I did yesterday"
+- "Get activities from last Monday"  
+- "Summary of 3 days ago"
+- "What did I work on this week"
+- "Show folders accessed 2 hours ago"
+
+All date parameters in tools support both natural language and ISO 8601 formats.
 
 ## 🔧 Development
 
