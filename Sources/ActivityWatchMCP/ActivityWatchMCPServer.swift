@@ -503,10 +503,12 @@ actor ActivityWatchMCPServer {
         var start: String? = nil
         var end: String? = nil
         
-        if startStr != nil || endStr != nil {
-            let (parsedStart, parsedEnd) = try DateParsingHelper.parseDateRange(start: startStr, end: endStr)
-            start = parsedStart
-            end = parsedEnd
+        if let startStr = startStr {
+            start = DateParsingHelper.toISO8601String(try DateParsingHelper.parseDate(startStr))
+        }
+        
+        if let endStr = endStr {
+            end = DateParsingHelper.toISO8601String(try DateParsingHelper.parseDate(endStr))
         }
         
         do {
