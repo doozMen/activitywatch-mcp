@@ -585,6 +585,9 @@ actor ActivityWatchMCPServer {
         // Parse dates using natural language
         let (start, end) = try DateParsingHelper.parseDateRange(start: startStr, end: endStr)
         
+        logger.debug("Active buckets query - Input: start=\(startStr ?? "nil"), end=\(endStr ?? "nil")")
+        logger.debug("Active buckets query - Parsed: start=\(start), end=\(end)")
+        
         let minEvents = args["min_events"]?.intValue ?? 1
         
         do {

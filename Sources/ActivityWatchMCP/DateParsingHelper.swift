@@ -41,8 +41,7 @@ enum DateParsingHelper {
     /// Parse a date range from natural language or explicit start/end
     static func parseDateRange(start: String?, end: String?) throws -> (start: String, end: String) {
         let now = Date()
-        var calendar = Calendar.current
-        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let calendar = Calendar.current
         
         // Handle common patterns
         if let start = start, start.lowercased() == "today" && end == nil {
@@ -83,7 +82,11 @@ enum DateParsingHelper {
             endDate = try parseDate(end)
         } else {
             // If no end date, assume end of the same day
-            endDate = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: startDate))!.addingTimeInterval(-1)
+            let startOfDay = calendar.startOfDay(for: startDate)
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+                throw DateParserError.unableToParseDate("Failed to calculate end of day")
+            }
+            endDate = nextDay.addingTimeInterval(-1)
         }
         
         return (toISO8601String(startDate), toISO8601String(endDate))
@@ -106,10 +109,11 @@ enum DateParsingHelper {
         } else if components.count == 1 {
             // Single date - assume full day
             let date = try parseDate(components[0])
-            var calendar = Calendar.current
-            calendar.timeZone = TimeZone(identifier: "UTC")!
+            let calendar = Calendar.current
             let startOfDay = calendar.startOfDay(for: date)
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+            guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+                throw DateParserError.unableToParseDate("Failed to calculate end of day")
+            }
             
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withColonSeparatorInTimeZone]
