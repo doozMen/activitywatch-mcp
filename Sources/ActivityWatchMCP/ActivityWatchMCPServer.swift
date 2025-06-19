@@ -13,7 +13,7 @@ actor ActivityWatchMCPServer {
     private let server: Server
     private let api: ActivityWatchAPI
     private let logger: Logger
-    private let version = "2.3.1"
+    private let version = "2.4.1"
     
     /// Initializes a new ActivityWatch MCP Server instance.
     ///
@@ -223,17 +223,17 @@ actor ActivityWatchMCPServer {
                 
                 Parameters:
                 - start: Start time (supports natural language like "today", "yesterday", "3 days ago", or ISO 8601)
-                - end: End time (optional - defaults to end of start day if omitted)
+                - end: End time (OPTIONAL - defaults to end of start day if omitted. DO NOT provide end="now" for single day queries)
                 - min_events: Minimum number of events to consider bucket active (default: 1)
                 
                 Natural language examples:
-                - start="today" - Gets today's active buckets
-                - start="yesterday" - Gets yesterday's data
-                - start="last week" - Gets last week's data
-                - start="3 days ago", end="yesterday" - Custom range
+                - start="today" - Gets today's active buckets (DO NOT add end parameter)
+                - start="yesterday" - Gets yesterday's data (DO NOT add end parameter)
+                - start="last week" - Gets last week's data (DO NOT add end parameter)
+                - start="3 days ago", end="yesterday" - Custom range (end parameter needed for ranges)
                 
-                ISO 8601 format also supported:
-                - start="2024-01-15T00:00:00Z", end="2024-01-15T23:59:59Z"
+                IMPORTANT: For single day queries like "today" or "yesterday", omit the end parameter entirely.
+                The tool will automatically calculate the end of the day.
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
@@ -252,7 +252,7 @@ actor ActivityWatchMCPServer {
                             "default": .int(1)
                         ])
                     ]),
-                    "required": .array([.string("start"), .string("end")])
+                    "required": .array([.string("start")])
                 ])
             ),
             
@@ -265,14 +265,16 @@ actor ActivityWatchMCPServer {
                 
                 Parameters:
                 - start: Start time (supports natural language like "today", "yesterday", or ISO 8601)
-                - end: End time (optional - defaults to end of start day if omitted)
+                - end: End time (OPTIONAL - defaults to end of start day if omitted. DO NOT provide end="now" for single day queries)
                 - bucket_filter: Optional bucket ID pattern to filter (e.g., "window")
                 
                 Natural language examples:
-                - start="today" - Today's folders
-                - start="yesterday" - Yesterday's folders
-                - start="this week" - This week's folders
-                - start="2 hours ago", end="now" - Recent activity
+                - start="today" - Today's folders (DO NOT add end parameter)
+                - start="yesterday" - Yesterday's folders (DO NOT add end parameter)
+                - start="this week" - This week's folders (DO NOT add end parameter)
+                - start="2 hours ago", end="now" - Recent activity (end parameter ok for "now")
+                
+                IMPORTANT: For single day queries, omit the end parameter entirely.
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
@@ -290,7 +292,7 @@ actor ActivityWatchMCPServer {
                             "description": .string("Optional bucket ID pattern to filter")
                         ])
                     ]),
-                    "required": .array([.string("start"), .string("end")])
+                    "required": .array([.string("start")])
                 ])
             ),
             
@@ -301,17 +303,20 @@ actor ActivityWatchMCPServer {
                 Analyzes window titles from terminals, editors, and file managers to extract folder names.
                 
                 Parameters:
-                - start: Start time (natural language or ISO 8601)
-                - end: End time (optional - defaults to end of start day)
+                - start: Start time (natural language or ISO 8601) - REQUIRED
+                - end: End time - OPTIONAL! Defaults to end of start day. DO NOT provide end="now" for single day queries!
                 - includeWeb: Include web URLs as folders (default: false)
                 - minDuration: Minimum duration in seconds to consider a folder active (default: 5)
                 
                 Natural language examples:
-                - start="today" - Today's folder activity
-                - start="yesterday" - Yesterday's activity
-                - start="this week" - This week's folders
-                - start="monday", end="friday" - Work week activity
-                - start="3 hours ago" - Recent folder activity
+                - start="today" - Today's folder activity (DO NOT add end parameter)
+                - start="yesterday" - Yesterday's activity (DO NOT add end parameter)
+                - start="this week" - This week's folders (DO NOT add end parameter)
+                - start="monday", end="friday" - Work week activity (end parameter needed for ranges)
+                - start="3 hours ago" - Recent folder activity (DO NOT add end parameter)
+                
+                IMPORTANT: When the user asks for "today's activity", use ONLY start="today". 
+                DO NOT add end="now" or any end parameter - the tool handles this automatically!
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
@@ -335,7 +340,7 @@ actor ActivityWatchMCPServer {
                             "default": .int(5)
                         ])
                     ]),
-                    "required": .array([.string("start"), .string("end")])
+                    "required": .array([.string("start")])
                 ])
             ),
             
@@ -582,13 +587,23 @@ actor ActivityWatchMCPServer {
         let startStr = args["start"]?.stringValue
         let endStr = args["end"]?.stringValue
         
+        // Check for common AI mistakes
+        if let endStr = endStr, endStr.lowercased() == "now" && 
+           (startStr?.lowercased() == "today" || startStr?.lowercased() == "yesterday" || 
+            startStr?.lowercased() == "this week" || startStr?.lowercased() == "last week") {
+            logger.warning("AI provided end=\"now\" with single period query. Ignoring end parameter.")
+            // Ignore the end parameter for single period queries
+            let (start, end) = try DateParsingHelper.parseDateRange(start: startStr, end: nil)
+            return try await performActiveBuckets(start: start, end: end, minEvents: args["min_events"]?.intValue ?? 1)
+        }
+        
         // Parse dates using natural language
         let (start, end) = try DateParsingHelper.parseDateRange(start: startStr, end: endStr)
-        
-        logger.debug("Active buckets query - Input: start=\(startStr ?? "nil"), end=\(endStr ?? "nil")")
+        return try await performActiveBuckets(start: start, end: end, minEvents: args["min_events"]?.intValue ?? 1)
+    }
+    
+    private func performActiveBuckets(start: String, end: String, minEvents: Int) async throws -> CallTool.Result {
         logger.debug("Active buckets query - Parsed: start=\(start), end=\(end)")
-        
-        let minEvents = args["min_events"]?.intValue ?? 1
         
         do {
             // First, get all buckets
@@ -660,11 +675,22 @@ actor ActivityWatchMCPServer {
         let startStr = args["start"]?.stringValue
         let endStr = args["end"]?.stringValue
         
+        // Check for common AI mistakes
+        if let endStr = endStr, endStr.lowercased() == "now" && 
+           (startStr?.lowercased() == "today" || startStr?.lowercased() == "yesterday" || 
+            startStr?.lowercased() == "this week" || startStr?.lowercased() == "last week") {
+            logger.warning("AI provided end=\"now\" with single period query. Ignoring end parameter.")
+            // Ignore the end parameter for single period queries
+            let (start, end) = try DateParsingHelper.parseDateRange(start: startStr, end: nil)
+            return try await performActiveFolders(start: start, end: end, bucketFilter: args["bucket_filter"]?.stringValue)
+        }
+        
         // Parse dates using natural language
         let (start, end) = try DateParsingHelper.parseDateRange(start: startStr, end: endStr)
-        
-        let bucketFilter = args["bucket_filter"]?.stringValue
-        
+        return try await performActiveFolders(start: start, end: end, bucketFilter: args["bucket_filter"]?.stringValue)
+    }
+    
+    private func performActiveFolders(start: String, end: String, bucketFilter: String?) async throws -> CallTool.Result {
         do {
             // Get all window buckets
             let buckets = try await api.listBuckets()
@@ -1003,9 +1029,20 @@ actor ActivityWatchMCPServer {
         let startStr = args["start"]?.stringValue
         let endStr = args["end"]?.stringValue
         
+        // Check for common AI mistakes
+        if let endStr = endStr, endStr.lowercased() == "now" && startStr?.lowercased() == "today" {
+            logger.warning("AI provided end=\"now\" with start=\"today\". Ignoring end parameter for single day query.")
+            // Ignore the end parameter for single day queries
+            let (start, end) = try DateParsingHelper.parseDateRange(start: startStr, end: nil)
+            return try await performGetFolderActivity(start: start, end: end, args: args)
+        }
+        
         // Parse dates using natural language
         let (start, end) = try DateParsingHelper.parseDateRange(start: startStr, end: endStr)
-        
+        return try await performGetFolderActivity(start: start, end: end, args: args)
+    }
+    
+    private func performGetFolderActivity(start: String, end: String, args: [String: Value]) async throws -> CallTool.Result {
         let includeWeb = args["includeWeb"]?.boolValue ?? false
         let minDuration = args["minDuration"]?.doubleValue ?? 5.0
         

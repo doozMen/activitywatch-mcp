@@ -7,7 +7,17 @@
 
 A Swift implementation of the Model Context Protocol (MCP) server for [ActivityWatch](https://activitywatch.net/), providing structured access to time tracking data for AI assistants.
 
-## 🌟 What's New in v2.3.1
+## 🌟 What's New in v2.4.0
+
+### Natural Language Date Support
+All date parameters now support natural language! Instead of ISO 8601 dates, you can use:
+- `start="today"`, `end="yesterday"`
+- `start="3 days ago"`, `start="last week"`
+- `start="2 hours ago"`, `start="last monday"`
+
+This makes querying ActivityWatch much more intuitive through AI assistants.
+
+## Previous Release (v2.3.1)
 
 The `get-folder-activity` tool provides intelligent folder activity analysis by extracting folder names from:
 - Terminal applications (with context support like "project = side-project")

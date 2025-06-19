@@ -5,6 +5,39 @@ All notable changes to the ActivityWatch MCP Server Swift implementation will be
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1] - 2025-06-19
+
+### Fixed
+- Made `end` parameter truly optional in tool schemas (removed from required arrays)
+- Added automatic handling for common AI mistakes like providing `end="now"` with `start="today"`
+- Improved tool descriptions with explicit warnings about not adding `end` parameter for single day queries
+- Better error messages and logging when AI provides incorrect parameters
+
+### Changed
+- Tool descriptions now emphasize that `end` parameter should be omitted for single day queries
+- Added logic to ignore `end="now"` when used with single period queries like "today" or "yesterday"
+
+## [2.4.0] - 2025-06-19
+
+### Added
+- Natural language date parsing support via SwiftDateParser integration
+- All date parameters now accept natural language inputs like:
+  - "today", "yesterday", "tomorrow"
+  - "3 days ago", "last week", "this month"
+  - "2 hours ago", "last monday"
+- Backward compatibility with ISO 8601 date formats
+- DateParsingHelper utility for consistent date handling across all tools
+- Smart defaults: omitting end date defaults to end of start day
+
+### Changed
+- Updated all tool descriptions to document natural language date support
+- Enhanced README with comprehensive date formatting guide
+- Improved error handling by removing force unwraps
+
+### Fixed
+- Independent date parsing for get-events tool (start and end dates are now parsed separately)
+- Proper error handling for date calculation failures
+
 ## [2.3.1] - 2025-06-17
 
 ### Added
