@@ -110,8 +110,13 @@ actor ActivityWatchMCPServer {
                 Execute an AQL (ActivityWatch Query Language) query.
                 
                 Parameters:
-                - timeperiods: Array of ISO date ranges (e.g., ["2024-01-01T00:00:00+00:00/2024-01-02T00:00:00+00:00"])
+                - timeperiods: Array of ISO 8601 date ranges separated by "/" (e.g., ["2024-01-01T00:00:00+00:00/2024-01-02T00:00:00+00:00"])
                 - query: Array of AQL statements joined by semicolons
+                
+                Date format for timeperiods:
+                - Use +00:00 or Z for UTC: "2024-01-01T00:00:00+00:00" or "2024-01-01T00:00:00Z"
+                - With timezone offset: "2024-01-01T09:00:00+01:00" (CET)
+                - Range format: "start/end" (e.g., "2024-01-01T00:00:00Z/2024-01-02T00:00:00Z")
                 
                 Example:
                 timeperiods: ["2024-10-28T00:00:00+00:00/2024-10-29T00:00:00+00:00"]
@@ -123,7 +128,7 @@ actor ActivityWatchMCPServer {
                         "timeperiods": .object([
                             "type": .string("array"),
                             "items": .object(["type": .string("string")]),
-                            "description": .string("Array of time period ranges")
+                            "description": .string("Array of ISO 8601 time period ranges in format: start/end")
                         ]),
                         "query": .object([
                             "type": .string("array"),
@@ -143,8 +148,12 @@ actor ActivityWatchMCPServer {
                 Parameters:
                 - bucket_id: The ID of the bucket to query
                 - limit: Maximum number of events to return (optional)
-                - start: Start time in ISO format (optional)
-                - end: End time in ISO format (optional)
+                - start: Start time in ISO 8601 format (optional, e.g., "2024-01-01T00:00:00Z")
+                - end: End time in ISO 8601 format (optional, e.g., "2024-01-01T23:59:59Z")
+                
+                Date format examples:
+                - UTC: "2024-01-15T14:30:00Z"
+                - With offset: "2024-01-15T09:30:00-05:00" (EST)
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
@@ -159,11 +168,11 @@ actor ActivityWatchMCPServer {
                         ]),
                         "start": .object([
                             "type": .string("string"),
-                            "description": .string("Start time in ISO format")
+                            "description": .string("Start time in ISO 8601 format (e.g., 2024-01-01T00:00:00Z)")
                         ]),
                         "end": .object([
                             "type": .string("string"),
-                            "description": .string("End time in ISO format")
+                            "description": .string("End time in ISO 8601 format (e.g., 2024-01-01T23:59:59Z)")
                         ])
                     ]),
                     "required": .array([.string("bucket_id")])
@@ -205,20 +214,24 @@ actor ActivityWatchMCPServer {
                 This is useful for identifying which watchers/data sources were active during a period.
                 
                 Parameters:
-                - start: Start time in ISO format (e.g., "2024-01-01T00:00:00Z")
-                - end: End time in ISO format (e.g., "2024-01-02T00:00:00Z")
+                - start: Start time in ISO 8601 format (e.g., "2024-01-01T00:00:00Z" for UTC, "2024-01-01T09:00:00+01:00" for CET)
+                - end: End time in ISO 8601 format (e.g., "2024-01-02T00:00:00Z" for UTC)
                 - min_events: Minimum number of events to consider bucket active (default: 1)
+                
+                Example usage:
+                - Today (UTC): start="2024-01-15T00:00:00Z", end="2024-01-15T23:59:59Z"
+                - Last 7 days: start="2024-01-08T00:00:00Z", end="2024-01-15T23:59:59Z"
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "start": .object([
                             "type": .string("string"),
-                            "description": .string("Start time in ISO format")
+                            "description": .string("Start time in ISO 8601 format (e.g., 2024-01-01T00:00:00Z)")
                         ]),
                         "end": .object([
                             "type": .string("string"),
-                            "description": .string("End time in ISO format")
+                            "description": .string("End time in ISO 8601 format (e.g., 2024-01-01T23:59:59Z)")
                         ]),
                         "min_events": .object([
                             "type": .string("integer"),
@@ -238,20 +251,25 @@ actor ActivityWatchMCPServer {
                 Works best with file managers, terminals, and code editors that show paths in titles.
                 
                 Parameters:
-                - start: Start time in ISO format (e.g., "2024-01-01T00:00:00Z")
-                - end: End time in ISO format (e.g., "2024-01-02T00:00:00Z")
+                - start: Start time in ISO 8601 format (e.g., "2024-01-01T00:00:00Z" for UTC)
+                - end: End time in ISO 8601 format (e.g., "2024-01-02T00:00:00Z" for UTC)
                 - bucket_filter: Optional bucket ID pattern to filter (e.g., "window")
+                
+                Date format examples:
+                - UTC: "2024-01-15T00:00:00Z"
+                - With timezone: "2024-01-15T09:00:00+01:00" (CET)
+                - Always include timezone (Z for UTC or +/-HH:MM)
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "start": .object([
                             "type": .string("string"),
-                            "description": .string("Start time in ISO format")
+                            "description": .string("Start time in ISO 8601 format (e.g., 2024-01-01T00:00:00Z)")
                         ]),
                         "end": .object([
                             "type": .string("string"),
-                            "description": .string("End time in ISO format")
+                            "description": .string("End time in ISO 8601 format (e.g., 2024-01-01T23:59:59Z)")
                         ]),
                         "bucket_filter": .object([
                             "type": .string("string"),
@@ -269,21 +287,26 @@ actor ActivityWatchMCPServer {
                 Analyzes window titles from terminals, editors, and file managers to extract folder names.
                 
                 Parameters:
-                - start: Start time in ISO format (e.g., "2024-01-01T00:00:00Z")
-                - end: End time in ISO format (e.g., "2024-01-02T00:00:00Z")
+                - start: Start time in ISO 8601 format (e.g., "2024-01-01T00:00:00Z" for UTC)
+                - end: End time in ISO 8601 format (e.g., "2024-01-02T00:00:00Z" for UTC)
                 - includeWeb: Include web URLs as folders (default: false)
                 - minDuration: Minimum duration in seconds to consider a folder active (default: 5)
+                
+                Common date patterns:
+                - Today (UTC): start="2024-01-15T00:00:00Z", end="2024-01-15T23:59:59Z"
+                - This week: start="2024-01-15T00:00:00Z", end="2024-01-21T23:59:59Z"
+                - With timezone: "2024-01-15T09:00:00-05:00" (EST)
                 """,
                 inputSchema: .object([
                     "type": .string("object"),
                     "properties": .object([
                         "start": .object([
                             "type": .string("string"),
-                            "description": .string("Start time in ISO format")
+                            "description": .string("Start time in ISO 8601 format (e.g., 2024-01-01T00:00:00Z)")
                         ]),
                         "end": .object([
                             "type": .string("string"),
-                            "description": .string("End time in ISO format")
+                            "description": .string("End time in ISO 8601 format (e.g., 2024-01-01T23:59:59Z)")
                         ]),
                         "includeWeb": .object([
                             "type": .string("boolean"),
@@ -776,6 +799,20 @@ actor ActivityWatchMCPServer {
         let examples = """
         # ActivityWatch Query Language (AQL) Examples
         
+        ## Date and Time Format Guide
+        
+        ### Time Period Format
+        For the `timeperiods` parameter, use ISO 8601 format with a slash separator:
+        - **UTC format**: `["2024-01-15T00:00:00Z/2024-01-16T00:00:00Z"]`
+        - **With timezone offset**: `["2024-01-15T00:00:00+00:00/2024-01-16T00:00:00+00:00"]`
+        - **Multiple periods**: `["2024-01-01T00:00:00Z/2024-01-02T00:00:00Z", "2024-01-15T00:00:00Z/2024-01-16T00:00:00Z"]`
+        
+        ### Common Date Patterns
+        - **Today (UTC)**: `"2024-01-15T00:00:00Z/2024-01-16T00:00:00Z"`
+        - **This week**: `"2024-01-15T00:00:00Z/2024-01-22T00:00:00Z"`
+        - **Last 30 days**: `"2023-12-16T00:00:00Z/2024-01-16T00:00:00Z"`
+        - **With timezone (CET)**: `"2024-01-15T00:00:00+01:00/2024-01-16T00:00:00+01:00"`
+        
         ## Basic Queries
         
         ### Get all window events for today
@@ -842,6 +879,13 @@ actor ActivityWatchMCPServer {
         - `sort_by_duration(events)` - Sort events by duration
         - `sum_durations(events)` - Calculate total duration
         - `filter_period_intersect(events1, events2)` - Get events that overlap in time
+        
+        ## Important Notes
+        
+        1. **Always include timezone** in your date strings (use Z for UTC or +/-HH:MM)
+        2. **Bucket names** include the hostname (e.g., 'aw-watcher-window_hostname')
+        3. **Time periods** must be in the format "start/end" with a forward slash
+        4. **Query statements** are separated by semicolons when in the same string
         """
         
         return CallTool.Result(content: [.text(examples)])

@@ -136,6 +136,80 @@ Provides a comprehensive summary of local folder activity including:
 Use query-examples tool to see common AQL patterns
 ```
 
+## 📅 Date and Time Formatting Guide
+
+ActivityWatch uses ISO 8601 format for all date and time parameters. Here's a comprehensive guide:
+
+### Basic Format
+All dates must be in ISO 8601 format with timezone information:
+- **Full format**: `YYYY-MM-DDTHH:MM:SSZ` or `YYYY-MM-DDTHH:MM:SS+HH:MM`
+- **Date part**: Year-Month-Day (e.g., `2024-01-15`)
+- **Time part**: Hour:Minute:Second (e.g., `14:30:00`)
+- **Separator**: Use `T` between date and time
+- **Timezone**: Use `Z` for UTC or `+HH:MM`/`-HH:MM` for offset
+
+### Examples by Timezone
+
+#### UTC (Recommended)
+```
+- Today at midnight: 2024-01-15T00:00:00Z
+- Today at noon: 2024-01-15T12:00:00Z
+- Today at 11:59 PM: 2024-01-15T23:59:59Z
+```
+
+#### With Timezone Offset
+```
+- Eastern Time (EST, -05:00): 2024-01-15T09:00:00-05:00
+- Central European Time (CET, +01:00): 2024-01-15T09:00:00+01:00
+- Japan Standard Time (JST, +09:00): 2024-01-15T09:00:00+09:00
+```
+
+### Common Query Patterns
+
+#### Get Today's Data (UTC)
+```json
+{
+  "start": "2024-01-15T00:00:00Z",
+  "end": "2024-01-15T23:59:59Z"
+}
+```
+
+#### Get This Week's Data
+```json
+{
+  "start": "2024-01-15T00:00:00Z",
+  "end": "2024-01-21T23:59:59Z"
+}
+```
+
+#### Get Last 7 Days
+```json
+{
+  "start": "2024-01-08T00:00:00Z",
+  "end": "2024-01-15T23:59:59Z"
+}
+```
+
+### For AQL Queries
+The `run-query` tool uses a slightly different format for time periods:
+```json
+{
+  "timeperiods": ["2024-01-15T00:00:00+00:00/2024-01-16T00:00:00+00:00"],
+  "query": ["..."]
+}
+```
+
+Note the:
+- Use of `+00:00` instead of `Z` for UTC
+- Periods are separated by `/`
+- Multiple periods can be specified in the array
+
+### Tips
+1. **Always include timezone** - Never omit the timezone designator
+2. **Use UTC when possible** - Simplifies calculations and avoids DST issues
+3. **Be consistent** - Stick to one format throughout your queries
+4. **Check your system time** - Ensure your computer's clock is correctly set
+
 ## 🔧 Development
 
 ### Building
