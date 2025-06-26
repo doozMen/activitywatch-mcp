@@ -131,3 +131,6 @@ dist
 .DS_Store
 .build
 .swiftpm/
+
+# Data from running summary too
+data/*
