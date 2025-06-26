@@ -94,6 +94,29 @@ Add to your Claude Desktop configuration file:
 - `--log-level`: Set logging level (debug, info, warning, error, critical)
 - `--server-url`: Custom ActivityWatch server URL (default: http://localhost:5600)
 
+## 📊 Activity Analysis Scripts
+
+### **Quick Analysis Workflow**
+
+Generate comprehensive activity analysis and import to TimeStory:
+
+```bash
+# Complete workflow: Analysis → JSON → Import
+./claude-activity-workflow.sh today
+
+# Just generate markdown analysis  
+./claude-activity-analysis.sh yesterday > yesterday-analysis.md
+
+# Convert existing analysis to JSON
+./claude-instructions/scripts/convert-analysis-to-json.sh analysis.md > data.json
+```
+
+### **Script Overview**
+
+- **`claude-activity-analysis.sh`** - Generates comprehensive markdown analysis only
+- **`convert-analysis-to-json.sh`** - Converts markdown analysis to TimeStory JSON format  
+- **`claude-activity-workflow.sh`** - Complete workflow with TimeStory import
+
 ## 🧠 Claude Integration Usage
 
 ### **Daily Activity Analysis**
