@@ -1,0 +1,142 @@
+{
+  "date": "2025-06-26",
+  "timezone": "Europe/Brussels",
+  "timeSummary": {
+    "startTime": "09:00",
+    "endTime": "17:30",
+    "totalDurationMinutes": 510,
+    "billableHours": 0.35,
+    "sideProjectHours": 3.15
+  },
+  "achievements": [
+    {
+      "type": "primary",
+      "title": "Timestory MCP Development",
+      "description": "Spent 3+ hours on database schema fixes and making the system repeatable",
+      "impact": "Major refactoring work to integrate Point-Free's sharing GRDB pattern"
+    },
+    {
+      "type": "secondary",
+      "title": "CueApp Development",
+      "description": "21 minutes on CueApp development in Xcode"
+    },
+    {
+      "type": "secondary",
+      "title": "ActivityWatch MCP Integration",
+      "description": "24 minutes on ActivityWatch MCP summary integration with Claude"
+    }
+  ],
+  "timelinePhases": [
+    {
+      "startTime": "09:00",
+      "endTime": "10:11",
+      "durationMinutes": 71,
+      "title": "Schema fixes session",
+      "category": "side_project",
+      "projectName": "timestory-mcp"
+    },
+    {
+      "startTime": "10:30",
+      "endTime": "11:04",
+      "durationMinutes": 34,
+      "title": "Repeatability implementation",
+      "category": "side_project",
+      "projectName": "timestory-mcp"
+    },
+    {
+      "startTime": "14:00",
+      "endTime": "14:21",
+      "durationMinutes": 21,
+      "title": "CueApp development",
+      "category": "client_work",
+      "projectName": "CueApp"
+    },
+    {
+      "startTime": "15:00",
+      "endTime": "15:24",
+      "durationMinutes": 24,
+      "title": "ActivityWatch MCP summary integration",
+      "category": "side_project",
+      "projectName": "activitywatch-mcp"
+    }
+  ],
+  "activityDistribution": {
+    "development": 180,
+    "terminal": 30,
+    "documentation": 0,
+    "testing": 0,
+    "versionControl": 0,
+    "communication": 0,
+    "other": 0
+  },
+  "folderActivity": {
+    "activeFolders": [
+      {
+        "path": "opens-time-chat/timestory-mcp",
+        "durationMinutes": 189,
+        "fileTypes": "swift,md"
+      },
+      {
+        "path": "CueApp",
+        "durationMinutes": 21,
+        "fileTypes": "swift"
+      },
+      {
+        "path": "activitywatch-mcp",
+        "durationMinutes": 24,
+        "fileTypes": "swift,sh"
+      }
+    ]
+  },
+  "workSummary": {
+    "clientWork": {
+      "totalMinutes": 21,
+      "totalHours": 0.35,
+      "projects": [
+        "CueApp"
+      ],
+      "client": "CueApp"
+    },
+    "sideProjects": {
+      "totalMinutes": 189,
+      "totalHours": 3.15,
+      "projects": [
+        "timestory-mcp",
+        "activitywatch-mcp"
+      ]
+    }
+  },
+  "insights": [
+    {
+      "category": "productivity",
+      "priority": "high",
+      "title": "Strong Focus on Single Objective",
+      "description": "70% of time spent on timestory-mcp with minimal context switching"
+    },
+    {
+      "category": "development",
+      "priority": "medium",
+      "title": "Successful System Refactoring",
+      "description": "Successfully made the system repeatable by any AI with Point-Free's GRDB pattern"
+    },
+    {
+      "category": "general",
+      "priority": "low",
+      "title": "Low Activity Tracking",
+      "description": "Only 2 events in tracking buckets suggests possible tracking gaps"
+    }
+  ],
+  "productivityMetrics": {
+    "codeCommits": 0,
+    "completionRate": 0.8,
+    "efficiencyRatio": 0.85,
+    "ticketsClosed": 0
+  },
+  "metrics": {
+    "productivityScore": 75,
+    "focusScore": 85,
+    "achievementLevel": 4,
+    "contextSwitches": 3,
+    "wellnessScore": 70
+  }
+}
