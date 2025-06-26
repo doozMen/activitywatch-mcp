@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "activitywatch": {
+      "command": "activitywatch-mcp",
+      "args": ["--log-level", "error"],
+      "env": {
+        "PATH": "$HOME/.swiftpm/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    },
+    "aw-context": {
+      "command": "aw-context-mcp",
+      "args": ["--log-level", "error"],
+      "env": {
+        "PATH": "$HOME/.swiftpm/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    },
+    "wispr-flow": {
+      "command": "wispr-flow-mcp",
+      "args": [],
+      "env": {
+        "PATH": "$HOME/.swiftpm/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}
