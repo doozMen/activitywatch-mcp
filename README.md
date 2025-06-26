@@ -27,6 +27,7 @@ The `get-folder-activity` tool provides intelligent folder activity analysis by 
 
 ## 🚀 Features
 
+### **Core MCP Server**
 - **List Buckets**: Browse all ActivityWatch data buckets with optional filtering
 - **Active Buckets**: Find which buckets have activity within a time range
 - **Active Folders**: Extract unique folder paths from window titles
@@ -36,6 +37,14 @@ The `get-folder-activity` tool provides intelligent folder activity analysis by 
 - **Get Settings**: Access ActivityWatch configuration
 - **Query Examples**: Built-in examples for common queries
 - **Productivity Prompts**: Guided workflows for productivity analysis
+
+### **🧠 Claude Integration Tools**
+- **`claude-activity-summary.sh`**: AI-powered daily activity analysis with TimeStory JSON output
+- **`convert-analysis-to-json.sh`**: Convert existing Claude analysis to structured JSON
+- **Two-step workflow**: Natural analysis → Structured data conversion
+- **Analysis-only mode**: Debug and review Claude's insights before JSON conversion
+- **Comprehensive data collection**: ActivityWatch + health + voice + development tools
+- **TimeStory compatibility**: Direct import into TimeStory MCP for productivity tracking
 
 ## 📋 Prerequisites
 
@@ -85,7 +94,43 @@ Add to your Claude Desktop configuration file:
 - `--log-level`: Set logging level (debug, info, warning, error, critical)
 - `--server-url`: Custom ActivityWatch server URL (default: http://localhost:5600)
 
-## 📖 Usage Examples
+## 🧠 Claude Integration Usage
+
+### **Daily Activity Analysis**
+```bash
+# Get comprehensive analysis as markdown
+./claude-activity-summary.sh --analysis-only today
+
+# Generate TimeStory-compatible JSON
+./claude-activity-summary.sh today > daily_summary.json
+
+# Analyze yesterday's activities
+./claude-activity-summary.sh yesterday
+```
+
+### **Convert Existing Analysis**
+```bash
+# Convert analysis file to JSON
+./convert-analysis-to-json.sh analysis.md > output.json
+
+# Pipe analysis to converter
+cat today.md | ./convert-analysis-to-json.sh > today.json
+```
+
+### **Integration Workflow**
+```bash
+# 1. Generate analysis
+./claude-activity-summary.sh --analysis-only > analysis.md
+
+# 2. Review and edit if needed
+# 3. Convert to TimeStory format
+./convert-analysis-to-json.sh analysis.md > timesheet.json
+
+# 4. Import via timestory-mcp
+# Use import_timestory tool with the generated JSON
+```
+
+## 📖 MCP Server Usage Examples
 
 ### List Buckets
 ```
@@ -309,7 +354,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Model Context Protocol](https://modelcontextprotocol.io/) for the MCP specification
 - Original [TypeScript implementation](https://github.com/8bitgentleman/activitywatch-mcp-server) by 8bitgentleman
 
+## 📁 Directory Structure
+
+- **`claude-activity-summary.sh`** - Main Claude integration tool
+- **`convert-analysis-to-json.sh`** - Standalone analysis converter
+- **`claude-instructions/`** - Development history and documentation
+- **`today.md`** / **`today.json`** - Example analysis and JSON output
+- **`mcp-activity-config.json`** - Complete MCP server configuration
+
 ## 🔗 Related Projects
 
 - [ActivityWatch](https://github.com/ActivityWatch/activitywatch) - The time tracking application
 - [MCP Swift SDK](https://github.com/modelcontextprotocol/swift-sdk) - Swift SDK for Model Context Protocol
+- [TimeStory MCP](../timestory-mcp/) - TimeStory database integration
+- [Opens Time Chat](../) - Complete productivity tracking ecosystem
