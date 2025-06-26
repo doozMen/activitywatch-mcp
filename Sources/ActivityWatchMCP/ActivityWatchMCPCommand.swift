@@ -16,7 +16,7 @@ struct ActivityWatchMCPCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "activitywatch-mcp",
         abstract: "MCP server that provides access to ActivityWatch time tracking data",
-        version: "2.4.1"
+        version: "2.5.0"
     )
     
     @Option(help: "Log level (debug, info, warning, error, critical)")
@@ -45,7 +45,7 @@ struct ActivityWatchMCPCommand: AsyncParsableCommand {
         }
         
         let logger = Logger(label: "activitywatch-mcp")
-        logger.info("Starting ActivityWatch MCP Server v2.4.1")
+        logger.info("Starting ActivityWatch MCP Server v2.5.0")
         logger.debug("Connecting to ActivityWatch at: \(serverUrl)")
         
         // Initialize and run server

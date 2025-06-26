@@ -7,7 +7,18 @@
 
 A Swift implementation of the Model Context Protocol (MCP) server for [ActivityWatch](https://activitywatch.net/), providing structured access to time tracking data for AI assistants.
 
-## 🌟 What's New in v2.4.0
+## 🌟 What's New in v2.5.0
+
+### 🧹 Clean Package Structure & Simplified Workflow
+- **Reorganized repository**: Moved all development artifacts to `claude-instructions/` for clean Swift package structure
+- **Simplified scripts**: Replaced complex multi-option script with focused, single-purpose tools:
+  - `claude-activity-analysis.sh` - Generate markdown analysis only
+  - `claude-activity-workflow.sh` - Complete workflow with TimeStory import
+  - `convert-analysis-to-json.sh` - Standalone conversion tool (moved to `claude-instructions/scripts/`)
+- **Better organization**: Config files in `claude-instructions/config/`, legacy scripts in `claude-instructions/legacy-scripts/`
+- **Professional structure**: Clean Swift package following conventions with development history preserved
+
+### Previous Release (v2.4.0)
 
 ### Natural Language Date Support
 All date parameters now support natural language! Instead of ISO 8601 dates, you can use:
