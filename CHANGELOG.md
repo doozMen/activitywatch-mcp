@@ -5,6 +5,33 @@ All notable changes to the ActivityWatch MCP Server Swift implementation will be
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [2.5.1] - 2025-11-09
+
+### Fixed
+- Fixed plugin.json validation issues for Claude Code marketplace
+  - Changed repository field to use HTTPS URL format
+  - Removed unsupported schema fields (schemaVersion, homepage, bugs, keywords, categories)
+  - Plugin now passes Claude Code marketplace validation
+
+## [2.5.0] - 2025-10-08
+
+### Added
+- **Comprehensive Integration Test Suite**: 91 tests covering all MCP tools and core functionality
+  - **APIClientTests.swift** (23 tests): REST API communication, error handling, concurrent operations
+  - **FolderActivityTests.swift** (21 tests): Folder extraction from window titles for 15+ applications
+  - **QueryFormatTests.swift** (31 tests): Natural language and ISO 8601 date parsing
+  - **MCPToolTests.swift** (16 tests): All 9 MCP tools with real-world workflows
+
+### Technical Details
+- Tests run against live ActivityWatch instance on localhost:5600
+- Comprehensive folder extraction support for Terminal (Warp, iTerm), IDEs (Cursor, VSCode, Xcode, JetBrains), and Finder
+- Natural language date parsing with SwiftDateParser integration
+- 100% test pass rate with ~30 second execution time
+- Swift 6.0 strict concurrency compliant with zero warnings
+- Actor-based concurrency ensures thread-safe operations
+
 ## [2.4.1] - 2025-06-19
 
 ### Fixed
@@ -98,3 +125,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `get-events`
   - `get-settings`
   - `query-examples`
+
+[Unreleased]: https://github.com/doozMen/activitywatch-mcp/compare/v2.5.1...HEAD
+[2.5.1]: https://github.com/doozMen/activitywatch-mcp/compare/v2.5.0...v2.5.1
+[2.5.0]: https://github.com/doozMen/activitywatch-mcp/compare/v2.4.1...v2.5.0
+[2.4.1]: https://github.com/doozMen/activitywatch-mcp/compare/v2.4.0...v2.4.1
+[2.4.0]: https://github.com/doozMen/activitywatch-mcp/compare/v2.3.1...v2.4.0
+[2.3.1]: https://github.com/doozMen/activitywatch-mcp/compare/v2.3.0...v2.3.1
+[2.3.0]: https://github.com/doozMen/activitywatch-mcp/compare/v2.2.0...v2.3.0
+[2.2.0]: https://github.com/doozMen/activitywatch-mcp/compare/v2.1.0...v2.2.0
+[2.1.0]: https://github.com/doozMen/activitywatch-mcp/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/doozMen/activitywatch-mcp/releases/tag/v2.0.0

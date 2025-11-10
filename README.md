@@ -7,7 +7,14 @@
 
 A Swift implementation of the Model Context Protocol (MCP) server for [ActivityWatch](https://activitywatch.net/), providing structured access to time tracking data for AI assistants.
 
-## 🌟 What's New in v2.5.0
+## 🌟 What's New in v2.5.1
+
+### Fix Plugin Validation Issues
+- Fixed plugin.json repository field format to use HTTPS URL
+- Removed unsupported schema fields from plugin.json (schemaVersion, homepage, bugs, keywords, categories)
+- Plugin now passes Claude Code marketplace validation
+
+### Previous Release (v2.5.0)
 
 ### 🧹 Clean Package Structure & Simplified Workflow
 - **Reorganized repository**: Moved all development artifacts to `claude-instructions/` for clean Swift package structure

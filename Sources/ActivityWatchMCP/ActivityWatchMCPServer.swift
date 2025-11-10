@@ -13,7 +13,7 @@ actor ActivityWatchMCPServer {
     private let server: Server
     private let api: ActivityWatchAPI
     private let logger: Logger
-    private let version = "2.5.0"
+    private let version = "2.6.0-alpha"
     
     /// Initializes a new ActivityWatch MCP Server instance.
     ///

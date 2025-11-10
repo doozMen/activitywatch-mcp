@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "activitywatch": {
+      "command": "activitywatch",
+      "args": ["--log-level", "info"]
+    }
+  }
+}

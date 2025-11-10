@@ -1,0 +1,13 @@
+{
+  "name": "activitywatch-mcp",
+  "description": "Direct ActivityWatch integration with natural language date support. Query time tracking data, analyze folder activity, and run powerful AQL queries.",
+  "version": "2.5.1",
+  "author": {
+    "name": "PromptPing",
+    "email": "stijn@dooz.be",
+    "url": "https://promptping.com"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/doozMen/activitywatch-mcp",
+  "mcpServers": "./.mcp.json"
+}
